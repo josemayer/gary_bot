@@ -6,6 +6,10 @@ from pafy import new
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 
+import sys
+sys.path.append('functions/')
+from tictactoe import saveImageTTT
+
 client = discord.Client()
 headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
 
@@ -79,6 +83,14 @@ async def on_message(message):
     if message.author == client.user:
         return
     
+    if message.content.startswith('>help'):
+        embed = discord.Embed(title=f":microscope: Gary Bot", description=f"Olá, agente! Meu nome é Gary, o pinguim inventor! Fui recrutado para executar pequenas missões cotidianas que lhe podem ser úteis. Se restarem dúvidas, não hesite em me contatar pelo celular da EPF. Estarei na minha oficina!", color=0x003366)
+        embed.set_thumbnail(url='https://i.imgur.com/fWskrI4.png')
+        embed.add_field(name=f"Comandos gerais", value=f"`1.` **>report** *<nome de uma cidade>*\n > Gera um relatório com os dados climáticos e de fuso horário da cidade especificada.\n`2.` **>matchs** *<nome de um invocador>*\n > Mostra o histórico das últimas 10 partidas de League of Legends do jogador especificado.\n`3.` **>join**\n > Acessa o canal de voz do usuário.\n`4.` **>leave**\n > Desconecta do canal de voz em que está conectado.\n`5.` **>ttt** *<mensagem>*\n > Gera uma mensagem codificada na simbologia tic-tac-toe, construída baseada [nesta tabela](https://i.imgur.com/3fifBia.png).\n`6.` **>hentai** *<nome de um personagem>*\n > ʕ•́ᴥ•̀ʔ", inline=False)
+        embed.add_field(name=f"Comandos do Club Penguin", value=f"`1.` **>bless**\n`2.` **>clovys**\n`3.` **>cone**\n`4.` **>pedro**\n`5.` **>ulisses**\n`6.` **>victor**\n`7.` **>vs**\n`8.` **>ze**", inline=False)
+        embed.set_footer(text=f"{client.user}: Quantos pares de meia eu tenho?", icon_url=client.user.avatar_url)    
+        await message.channel.send(embed=embed)
+
     if message.content.startswith('>ze'):
         await message.channel.send("o + top!!")
         await message.channel.send("<:ze:874783389218140200>\n:necktie: :briefcase:\n:jeans:\n:mans_shoe:")
@@ -147,6 +159,11 @@ async def on_message(message):
             
             await message.channel.send(embed=embed)
 
+    if message.content.startswith('>ttt '):
+        msg_content = message.content[5:]
+        saveImageTTT(msg_content)
+        await message.channel.send(file=discord.File('assets/imgs/msg.png'))
+        os.remove('assets/imgs/msg.png')
 
     if message.content == '>join':
         ffmpeg_opts = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
