@@ -1,6 +1,7 @@
 import discord
 import os
 import requests
+import time
 from discord import FFmpegPCMAudio
 from pafy import new
 from dotenv import load_dotenv
@@ -12,6 +13,7 @@ from tictactoe import saveImageTTT
 
 client = discord.Client()
 headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
+ffmpeg_opts = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
 
 load_dotenv()
 TOKEN = os.getenv('TOKEN')
@@ -31,7 +33,7 @@ def correct_name(city):
     name = name_content[0].getText().strip()
     return name
 
-def weather(city):
+def get_weather(city):
     city = city + " clima"
     res = requests.get(f'https://www.google.com/search?q={city}&oq={city}&aqs=chrome.0.35i39l2j0l4j46j69i60.6128j1j7&sourceid=chrome&ie=UTF-8', headers=headers)
     soup = BeautifulSoup(res.text, 'html.parser')
@@ -40,7 +42,7 @@ def weather(city):
     humidity = soup.select('#wob_hm')[0].getText().strip()
     return weather, info, humidity
 
-def time(city):
+def get_time(city):
     city = city + " horario"
     res = requests.get(f'https://www.google.com/search?q={city}&oq={city}&aqs=chrome.0.35i39l2j0l4j46j69i60.6128j1j7&sourceid=chrome&ie=UTF-8', headers=headers)
     soup = BeautifulSoup(res.text, 'html.parser')
@@ -88,6 +90,7 @@ async def on_message(message):
         embed.set_thumbnail(url='https://i.imgur.com/fWskrI4.png')
         embed.add_field(name=f"Comandos gerais", value=f"`1.` **>report** *<nome de uma cidade>*\n > Gera um relatório com os dados climáticos e de fuso horário da cidade especificada.\n`2.` **>matchs** *<nome de um invocador>*\n > Mostra o histórico das últimas 10 partidas de League of Legends do jogador especificado.\n`3.` **>join**\n > Acessa o canal de voz do usuário.\n`4.` **>leave**\n > Desconecta do canal de voz em que está conectado.\n`5.` **>ttt** *<mensagem>*\n > Gera uma mensagem codificada na simbologia tic-tac-toe, construída baseada [nesta tabela](https://i.imgur.com/3fifBia.png).\n`6.` **>hentai** *<nome de um personagem>*\n > ʕ•́ᴥ•̀ʔ", inline=False)
         embed.add_field(name=f"Comandos do Club Penguin", value=f"`1.` **>bless**\n`2.` **>clovys**\n`3.` **>cone**\n`4.` **>pedro**\n`5.` **>ulisses**\n`6.` **>victor**\n`7.` **>vs**\n`8.` **>ze**", inline=False)
+        embed.add_field(name=f"Comandos de Vinheta", value=f"`1.` **>cavalo**\n`2.` **>btv**\n`3.` **>defuse**\n`4.` **>plant**\n`5.` **>jumpscare**\n`6.` **>fortnite**", inline=False)
         embed.set_footer(text=f"{client.user}: Quantos pares de meia eu tenho?", icon_url=client.user.avatar_url)    
         await message.channel.send(embed=embed)
 
@@ -131,8 +134,8 @@ async def on_message(message):
                 await message.channel.send(":question: Cidade não encontrada")
                 return
 
-            local_weather = weather(city)
-            local_time = time(city)
+            local_weather = get_weather(city)
+            local_time = get_time(city)
             await message.channel.send(f":bar_chart: **Relatório de {city_correct}**:\n\n:alarm_clock: {city_correct}, {local_time[0]}, {local_time[1]}\n:thermometer: {local_weather[0]} °C, {local_weather[2]} de umidade, {local_weather[1]}")
 
     if message.content.startswith('>matchs '):
@@ -166,7 +169,6 @@ async def on_message(message):
         os.remove('assets/imgs/msg.png')
 
     if message.content == '>join':
-        ffmpeg_opts = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
         join_audio = new("https://www.youtube.com/watch?v=EVVp0J1-aU8")
         author = message.author
         channel = author.voice.channel
@@ -182,6 +184,132 @@ async def on_message(message):
         vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
         vc.is_playing()
 
+    if message.content == '>cavalo':
+        join_audio = new("https://www.youtube.com/watch?v=1xzGPPxKgJM")
+        author = message.author
+        channel = author.voice.channel
+
+        voice = discord.utils.get(client.voice_clients, guild=message.guild)
+
+        if voice != None:
+            await message.channel.send(":exclamation: O bot já está conectado!")
+            return
+
+        vc = await channel.connect()
+        audio = join_audio.getbestaudio().url
+        vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
+       
+        time.sleep(3.0)
+
+        for vc in client.voice_clients:
+            if vc.guild == message.guild:
+                await vc.disconnect()
+
+    if message.content == '>btv':
+        join_audio = new("https://www.youtube.com/watch?v=jogre8YMCiY")
+        author = message.author
+        channel = author.voice.channel
+
+        voice = discord.utils.get(client.voice_clients, guild=message.guild)
+
+        if voice != None:
+            await message.channel.send(":exclamation: O bot já está conectado!")
+            return
+
+        vc = await channel.connect()
+        audio = join_audio.getbestaudio().url
+        vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
+       
+        time.sleep(5.0)
+
+        for vc in client.voice_clients:
+            if vc.guild == message.guild:
+                await vc.disconnect()
+
+    if message.content == '>defuse':
+        join_audio = new("https://www.youtube.com/watch?v=EUSuCzl-c1M")
+        author = message.author
+        channel = author.voice.channel
+
+        voice = discord.utils.get(client.voice_clients, guild=message.guild)
+
+        if voice != None:
+            await message.channel.send(":exclamation: O bot já está conectado!")
+            return
+
+        vc = await channel.connect()
+        audio = join_audio.getbestaudio().url
+        vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
+       
+        time.sleep(3.0)
+
+        for vc in client.voice_clients:
+            if vc.guild == message.guild:
+                await vc.disconnect()
+
+    if message.content == '>plant':
+        join_audio = new("https://www.youtube.com/watch?v=6B8G3RRuYqE")
+        author = message.author
+        channel = author.voice.channel
+
+        voice = discord.utils.get(client.voice_clients, guild=message.guild)
+
+        if voice != None:
+            await message.channel.send(":exclamation: O bot já está conectado!")
+            return
+
+        vc = await channel.connect()
+        audio = join_audio.getbestaudio().url
+        vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
+       
+        time.sleep(2.0)
+
+        for vc in client.voice_clients:
+            if vc.guild == message.guild:
+                await vc.disconnect()
+
+    if message.content == '>jumpscare':
+        join_audio = new("https://www.youtube.com/watch?v=HEW9E0R1yn8")
+        author = message.author
+        channel = author.voice.channel
+
+        voice = discord.utils.get(client.voice_clients, guild=message.guild)
+
+        if voice != None:
+            await message.channel.send(":exclamation: O bot já está conectado!")
+            return
+
+        vc = await channel.connect()
+        audio = join_audio.getbestaudio().url
+        vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
+       
+        time.sleep(2.0)
+
+        for vc in client.voice_clients:
+            if vc.guild == message.guild:
+                await vc.disconnect()
+
+    if message.content == '>fortnite':
+        join_audio = new("https://www.youtube.com/watch?v=bmZwsCDibQs")
+        author = message.author
+        channel = author.voice.channel
+
+        voice = discord.utils.get(client.voice_clients, guild=message.guild)
+
+        if voice != None:
+            await message.channel.send(":exclamation: O bot já está conectado!")
+            return
+
+        vc = await channel.connect()
+        audio = join_audio.getbestaudio().url
+        vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
+       
+        time.sleep(6.0)
+
+        for vc in client.voice_clients:
+            if vc.guild == message.guild:
+                await vc.disconnect()
+    
     if message.content == '>leave':
         for vc in client.voice_clients:
             if vc.guild == message.guild:
