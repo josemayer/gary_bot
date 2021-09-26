@@ -227,7 +227,7 @@ async def on_message(message):
                 await vc.disconnect()
 
     if message.content == '>defuse':
-        join_audio = new("https://www.youtube.com/watch?v=EUSuCzl-c1M")
+        join_audio = new("https://www.youtube.com/watch?v=IyGtEIQqYw0")
         author = message.author
         channel = author.voice.channel
 
@@ -241,7 +241,7 @@ async def on_message(message):
         audio = join_audio.getbestaudio().url
         vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
        
-        time.sleep(3.0)
+        time.sleep(4.0)
 
         for vc in client.voice_clients:
             if vc.guild == message.guild:
@@ -262,7 +262,7 @@ async def on_message(message):
         audio = join_audio.getbestaudio().url
         vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
        
-        time.sleep(2.0)
+        time.sleep(4.0)
 
         for vc in client.voice_clients:
             if vc.guild == message.guild:
