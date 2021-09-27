@@ -2,6 +2,7 @@ import discord
 import os
 import requests
 import time
+import json
 from discord import FFmpegPCMAudio
 from pafy import new
 from dotenv import load_dotenv
@@ -17,6 +18,14 @@ ffmpeg_opts = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_
 
 load_dotenv()
 TOKEN = os.getenv('TOKEN')
+
+# ===== LOAD DATA FILES =====
+
+with open('commands/sounds.json') as sounds:
+    sounds_list = json.loads(sounds.read())
+    sounds.close()
+
+# ===========================
 
 # ===== GENERAL FUNCTIONS =====
 
@@ -183,133 +192,28 @@ async def on_message(message):
         audio = join_audio.getbestaudio().url
         vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
         vc.is_playing()
-
-    if message.content == '>cavalo':
-        join_audio = new("https://www.youtube.com/watch?v=1xzGPPxKgJM")
-        author = message.author
-        channel = author.voice.channel
-
-        voice = discord.utils.get(client.voice_clients, guild=message.guild)
-
-        if voice != None:
-            await message.channel.send(":exclamation: O bot já está conectado!")
-            return
-
-        vc = await channel.connect()
-        audio = join_audio.getbestaudio().url
-        vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
-       
-        time.sleep(3.0)
-
-        for vc in client.voice_clients:
-            if vc.guild == message.guild:
-                await vc.disconnect()
-
-    if message.content == '>btv':
-        join_audio = new("https://www.youtube.com/watch?v=jogre8YMCiY")
-        author = message.author
-        channel = author.voice.channel
-
-        voice = discord.utils.get(client.voice_clients, guild=message.guild)
-
-        if voice != None:
-            await message.channel.send(":exclamation: O bot já está conectado!")
-            return
-
-        vc = await channel.connect()
-        audio = join_audio.getbestaudio().url
-        vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
-       
-        time.sleep(5.0)
-
-        for vc in client.voice_clients:
-            if vc.guild == message.guild:
-                await vc.disconnect()
-
-    if message.content == '>defuse':
-        join_audio = new("https://www.youtube.com/watch?v=IyGtEIQqYw0")
-        author = message.author
-        channel = author.voice.channel
-
-        voice = discord.utils.get(client.voice_clients, guild=message.guild)
-
-        if voice != None:
-            await message.channel.send(":exclamation: O bot já está conectado!")
-            return
-
-        vc = await channel.connect()
-        audio = join_audio.getbestaudio().url
-        vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
-       
-        time.sleep(4.0)
-
-        for vc in client.voice_clients:
-            if vc.guild == message.guild:
-                await vc.disconnect()
-
-    if message.content == '>plant':
-        join_audio = new("https://www.youtube.com/watch?v=6B8G3RRuYqE")
-        author = message.author
-        channel = author.voice.channel
-
-        voice = discord.utils.get(client.voice_clients, guild=message.guild)
-
-        if voice != None:
-            await message.channel.send(":exclamation: O bot já está conectado!")
-            return
-
-        vc = await channel.connect()
-        audio = join_audio.getbestaudio().url
-        vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
-       
-        time.sleep(4.0)
-
-        for vc in client.voice_clients:
-            if vc.guild == message.guild:
-                await vc.disconnect()
-
-    if message.content == '>jumpscare':
-        join_audio = new("https://www.youtube.com/watch?v=HEW9E0R1yn8")
-        author = message.author
-        channel = author.voice.channel
-
-        voice = discord.utils.get(client.voice_clients, guild=message.guild)
-
-        if voice != None:
-            await message.channel.send(":exclamation: O bot já está conectado!")
-            return
-
-        vc = await channel.connect()
-        audio = join_audio.getbestaudio().url
-        vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
-       
-        time.sleep(2.0)
-
-        for vc in client.voice_clients:
-            if vc.guild == message.guild:
-                await vc.disconnect()
-
-    if message.content == '>fortnite':
-        join_audio = new("https://www.youtube.com/watch?v=bmZwsCDibQs")
-        author = message.author
-        channel = author.voice.channel
-
-        voice = discord.utils.get(client.voice_clients, guild=message.guild)
-
-        if voice != None:
-            await message.channel.send(":exclamation: O bot já está conectado!")
-            return
-
-        vc = await channel.connect()
-        audio = join_audio.getbestaudio().url
-        vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
-       
-        time.sleep(6.0)
-
-        for vc in client.voice_clients:
-            if vc.guild == message.guild:
-                await vc.disconnect()
     
+    for sound in sounds_list:
+        if message.content == '>' + sound['command']:
+            join_audio = new(sound['link'])
+            author = message.author
+            channel = author.voice.channel
+
+            voice = discord.utils.get(client.voice_clients, guild=message.guild)
+            if voice == None:
+                vc = await channel.connect()
+            else:
+                vc = voice
+
+            audio = join_audio.getbestaudio().url
+            vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
+           
+            time.sleep(sound['time'])
+
+            for vc in client.voice_clients:
+                if vc.guild == message.guild:
+                    await vc.disconnect()
+       
     if message.content == '>leave':
         for vc in client.voice_clients:
             if vc.guild == message.guild:
