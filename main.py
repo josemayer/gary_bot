@@ -127,6 +127,7 @@ async def on_message(message):
         embed.add_field(name=f"Comandos gerais", value=f"`1.` **>report** *<nome de uma cidade>*\n > Gera um relatório com os dados climáticos e de fuso horário da cidade especificada.\n`2.` **>matchs** *<nome de um invocador>*\n > Mostra o histórico das últimas 10 partidas de League of Legends do jogador especificado.\n`3.` **>join**\n > Acessa o canal de voz do usuário.\n`4.` **>leave**\n > Desconecta do canal de voz em que está conectado.\n`5.` **>ttt** *<mensagem>*\n > Gera uma mensagem codificada na simbologia tic-tac-toe, construída baseada [nesta tabela](https://i.imgur.com/3fifBia.png).\n`6.` **>hentai** *<nome de um personagem>*\n > ʕ•́ᴥ•̀ʔ", inline=False)
         embed.add_field(name=f"Comandos do Club Penguin", value=f"`1.` **>bless**\n`2.` **>clovys**\n`3.` **>cone**\n`4.` **>pedro**\n`5.` **>ulisses**\n`6.` **>victor**\n`7.` **>vs**\n`8.` **>ze**", inline=False)
         embed.add_field(name=f"Comandos de Vinheta", value=f"`1.` **>cavalo**\n`2.` **>btv**\n`3.` **>defuse**\n`4.` **>plant**\n`5.` **>jumpscare**\n`6.` **>fortnite**", inline=False)
+        embed.add_field(name=f"Comandos de Música", value=f"`1.` **>play** *<link do youtube>*\n > Toca a música do youtube com o link fornecido.\n`2.` **>queue**\n > Mostra a fila de reprodução.", inline=False)
         embed.set_footer(text=f"{client.user}: Quantos pares de meia eu tenho?", icon_url=client.user.avatar_url)    
         await message.channel.send(embed=embed)
 
