@@ -21,13 +21,11 @@ TOKEN = os.getenv('TOKEN')
 
 # ===== LOAD DATA FILES =====
 
-with open('commands/sounds.json') as sounds:
-    sounds_list = json.loads(sounds.read())
-    sounds.close()
-
-with open('commands/emotes.json') as emotes:
-    emotes_list = json.loads(emotes.read())
-    emotes.close()
+with open('commands/data.json') as data:
+    d = json.loads(data.read())
+    sounds_list = d['sounds']
+    emotes_list = d['emotes']
+    data.close()
 
 # ===========================
 
