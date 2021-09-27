@@ -3,7 +3,7 @@ import os
 import requests
 import asyncio
 import json
-import queue
+import numpy as np
 from discord import FFmpegPCMAudio
 from pafy import new
 from dotenv import load_dotenv
@@ -30,10 +30,16 @@ with open('commands/data.json') as data:
 
 # ===========================
 
+# ===== YOUTUBE-DL OPTIONS =====
+
+ydl_opt = {'format': 'bestaudio', 'quiet': 'True'}
+
+# ==============================
+
 # ===== INITIALIZE MUSIC QUEUE =====
 
-mq = queue.Queue()
-mq_info = queue.Queue()
+mq = []
+mq_info = []
 
 # ==================================
 
@@ -97,22 +103,40 @@ def treat_links(url):
         url = "https://" + url[2:]
     return url
 
-def top_queue(queue):
-    deque = queue.queue
-    return deque[0]
-
 def get_youtube_info(url, requester):
-    ydl = YoutubeDL()
-    r = ydl.extract_info(url, download=False)
+    with YoutubeDL(ydl_opt) as ydl:
+            r = ydl.extract_info(f"ytsearch:{url}", download=False)['entries'][0]
     info = {}
     info['name'] = r['title']
     info['duration'] = r['duration']
     dur_mins = str(r['duration'] // 60) + ":" + str("{:02d}".format(r['duration'] % 60))
     info['duration_str'] = dur_mins
-    info['link'] = url
+    info['link'] = r['webpage_url']
     info['requester'] = requester
 
     return info
+
+def get_playlist_info(url, requester):
+    with YoutubeDL(ydl_opt) as ydl:
+        r = ydl.extract_info(url, download=False)
+    list_info = []
+
+    for music in r['entries']:
+        info = {}
+        info['name'] = music['title']
+        info['duration'] = music['duration']
+        dur_mins = str(music['duration'] // 60) + ":" + str("{:02d}".format(music['duration'] % 60))
+        info['duration_str'] = dur_mins
+        info['link'] = music['webpage_url']
+        info['requester'] = requester
+        list_info.append(info)
+
+    return list_info
+
+def valid_playlist_link(url):
+    if url.find("&list=") != -1:
+        return True
+    return False
 
 # =============================
 
@@ -224,9 +248,9 @@ async def on_message(message):
 
     if message.content.startswith(">play "):
         link = message.content[6:]
-        join_audio = new(link)
         author = message.author
         channel = author.voice.channel
+        playlist = valid_playlist_link(link)
 
         voice = discord.utils.get(client.voice_clients, guild=message.guild)
         if voice == None:
@@ -234,42 +258,93 @@ async def on_message(message):
             await message.channel.send("> :musical_note: **Gary na área** :musical_note:\n> no canal `" + channel.name + "`")
         else:
             vc = voice
-
-        video_info = get_youtube_info(link, author.name)
-        mq_info.put(video_info)
-
-        if not mq.empty():
-            mq.put(join_audio)
-            await message.channel.send("> :arrow_double_down: **Adicionado à fila** [" + str(mq.qsize()) + "] : `" + video_info['name'] + "`")
+        
+        if not playlist:
+            video_info = get_youtube_info(link, author.name)
+            mq_info.append(video_info)
+            join_audio = new(video_info['link'])
         else:
-            mq.put(join_audio)
-            await message.channel.send("> :notes: **Tocando** :notes: : `" + video_info['name'] + "`")
-            while not mq.empty():
-                audio = top_queue(mq).getbestaudio().url
+            video_info = get_playlist_info(link, author.name)
+            for music in video_info:
+                mq_info.append(music)
+            join_audio = new(video_info[0]['link'])
+
+        if len(mq) > 0:
+            if not playlist:
+                mq.append(join_audio)
+                await message.channel.send("> :arrow_double_down: **Adicionado à fila** [" + str(len(mq)) + "] : `" + video_info['name'] + "`")
+            else:
+                for music in video_info:
+                    join_music_audio = new(music['link'])
+                    mq.append(join_music_audio)
+                await message.channel.send("> :arrow_double_down: **Adicionado à fila** : `playlist X`")
+        else:
+            if not playlist:
+                mq.append(join_audio)
+                await message.channel.send("> :notes: **Tocando** :notes: : `" + video_info['name'] + "`")
+            else:
+                for music in video_info:
+                    join_music_audio = new(music['link'])
+                    mq.append(join_music_audio)
+                await message.channel.send("> :arrow_double_down: **Adicionado à fila** : `playlist X`")
+            while len(mq) > 0:
+                audio = mq[0].getbestaudio().url
                 vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
         
                 while vc.is_playing():
                     await asyncio.sleep(1)
 
-                mq.get()
-                mq_info.get()
+                mq.pop(0)
+                mq_info.pop(0)
 
             for vc in client.voice_clients:
                 if vc.guild == message.guild:
                     await vc.disconnect()
 
     if message.content == '>queue':
-        queue_message = ""
-        i = 1
-        for music in mq_info.queue:
-            queue_message += str(i) + ". `" + music['name'] + "` (" + music['duration_str'] + ") - " + music['requester'] + "\n"
-            i += 1
-        if queue_message != "":
-            await message.channel.send(queue_message)
-        else:
+        if len(mq) == 0:
             await message.channel.send("A fila de reprodução está vazia!")
+            return
+
+        queue = np.array(mq_info)
+        queue_info = ""
+        i = 1
+
+        current_track = str(i) + ". `" + queue[0]['name'] + "` (" + queue[0]['duration_str'] + ") - solicitado por " + queue[0]['requester'] + "\n\n"
+        i += 1
+
+        for music in queue[1:10]:
+            queue_info += str(i) + ". `" + music['name'] + "` (" + music['duration_str'] + ") - solicitado por " + music['requester'] + "\n"
+            i += 1
+
+        embed = discord.Embed(title=f":loud_sound: Tocando agora", description=current_track, color=0x7b0ec9)
+        if queue_info != "":
+            embed.add_field(name=f":headphones: Lista de reprodução", value=queue_info, inline=False)
+
+        await message.channel.send(embed=embed)
+
+    if message.content == '>skip':
+        voice = discord.utils.get(client.voice_clients, guild=message.guild)
+
+        if voice == None:
+            await message.channel.send("O bot não está tocando nenhuma música no momento")
+            return
+        
+        if len(mq) > 1:
+            voice.pause()
+            mq.pop(0)
+            mq_info.pop(0)
+            audio = mq[0].getbestaudio().url
+            voice.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
+        else:
+            voice.stop()
+
 
     if message.content == '>leave':
+        if len(mq_info) > 0:
+            mq.clear()
+            mq_info.clear()
+
         for vc in client.voice_clients:
             if vc.guild == message.guild:
                 await vc.disconnect()
