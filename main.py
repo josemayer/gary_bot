@@ -1,13 +1,14 @@
 import discord
 import os
 import requests
-import time
+import asyncio
 import json
+import queue
 from discord import FFmpegPCMAudio
 from pafy import new
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
-
+from youtube_dl import YoutubeDL
 import sys
 sys.path.append('functions/')
 from tictactoe import saveImageTTT
@@ -28,6 +29,13 @@ with open('commands/data.json') as data:
     data.close()
 
 # ===========================
+
+# ===== INITIALIZE MUSIC QUEUE =====
+
+mq = queue.Queue()
+mq_info = queue.Queue()
+
+# ==================================
 
 # ===== GENERAL FUNCTIONS =====
 
@@ -88,6 +96,23 @@ def treat_links(url):
     if url[0:2] == "//":
         url = "https://" + url[2:]
     return url
+
+def top_queue(queue):
+    deque = queue.queue
+    return deque[0]
+
+def get_youtube_info(url, requester):
+    ydl = YoutubeDL()
+    r = ydl.extract_info(url, download=False)
+    info = {}
+    info['name'] = r['title']
+    info['duration'] = r['duration']
+    dur_mins = str(r['duration'] // 60) + ":" + str("{:02d}".format(r['duration'] % 60))
+    info['duration_str'] = dur_mins
+    info['link'] = url
+    info['requester'] = requester
+
+    return info
 
 # =============================
 
@@ -190,12 +215,59 @@ async def on_message(message):
             audio = join_audio.getbestaudio().url
             vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
            
-            time.sleep(sound['time'])
+            await asyncio.sleep(sound['time'])
 
             for vc in client.voice_clients:
                 if vc.guild == message.guild:
                     await vc.disconnect()
-       
+
+    if message.content.startswith(">play "):
+        link = message.content[6:]
+        join_audio = new(link)
+        author = message.author
+        channel = author.voice.channel
+
+        voice = discord.utils.get(client.voice_clients, guild=message.guild)
+        if voice == None:
+            vc = await channel.connect()
+            await message.channel.send("> :musical_note: **Gary na área** :musical_note:\n> no canal `" + channel.name + "`")
+        else:
+            vc = voice
+
+        video_info = get_youtube_info(link, author.name)
+        mq_info.put(video_info)
+
+        if not mq.empty():
+            mq.put(join_audio)
+            await message.channel.send("> :arrow_double_down: **Adicionado à fila** [" + str(mq.qsize()) + "] : `" + video_info['name'] + "`")
+        else:
+            mq.put(join_audio)
+            await message.channel.send("> :notes: **Tocando** :notes: : `" + video_info['name'] + "`")
+            while not mq.empty():
+                audio = top_queue(mq).getbestaudio().url
+                vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
+        
+                while vc.is_playing():
+                    await asyncio.sleep(1)
+
+                mq.get()
+                mq_info.get()
+
+            for vc in client.voice_clients:
+                if vc.guild == message.guild:
+                    await vc.disconnect()
+
+    if message.content == '>queue':
+        queue_message = ""
+        i = 1
+        for music in mq_info.queue:
+            queue_message += str(i) + ". `" + music['name'] + "` (" + music['duration_str'] + ") - " + music['requester'] + "\n"
+            i += 1
+        if queue_message != "":
+            await message.channel.send(queue_message)
+        else:
+            await message.channel.send("A fila de reprodução está vazia!")
+
     if message.content == '>leave':
         for vc in client.voice_clients:
             if vc.guild == message.guild:
