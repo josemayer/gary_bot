@@ -25,6 +25,10 @@ with open('commands/sounds.json') as sounds:
     sounds_list = json.loads(sounds.read())
     sounds.close()
 
+with open('commands/emotes.json') as emotes:
+    emotes_list = json.loads(emotes.read())
+    emotes.close()
+
 # ===========================
 
 # ===== GENERAL FUNCTIONS =====
@@ -103,30 +107,10 @@ async def on_message(message):
         embed.set_footer(text=f"{client.user}: Quantos pares de meia eu tenho?", icon_url=client.user.avatar_url)    
         await message.channel.send(embed=embed)
 
-    if message.content.startswith('>ze'):
-        await message.channel.send("o + top!!")
-        await message.channel.send("<:ze:874783389218140200>\n:necktie: :briefcase:\n:jeans:\n:mans_shoe:")
-
-    if message.content == '>pedro':
-        await message.channel.send("<:pedro:395610851370860544>\n:running_shirt_with_sash: :middle_finger:\n:shorts:\n:athletic_shoe:")
-
-    if message.content == '>clovys':
-        await message.channel.send("<:clovys:395608953930645504>\n:shirt: :thumbsup:\n:jeans:")
-    
-    if message.content == '>vs':
-        await message.channel.send("<:clovys:395608953930645504> :vs: <:pedro:395610851370860544>")
-
-    if message.content == '>bless':
-        await message.channel.send(":cloud: <:pedro:395610851370860544> :cloud:\n:cloud: :pray: :cloud:")
-
-    if message.content == '>ulisses':
-        await message.channel.send(":billed_cap:\n<:ulisses:874778518003781663>\n:womans_clothes:\n:shorts:\n:sandal:")
-
-    if message.content == '>victor':
-        await message.channel.send("<:victor:874775818881101824>\n:bikini: :point_right:\n:socks:")
-
-    if message.content == '>cone':
-        await message.channel.send("<:cone:874781203297886259>\n:school_satchel: :baby_bottle:\n:jeans:\n:hiking_boot:")
+    for emote in emotes_list:
+        if message.content == '>' + emote['command']:
+            for msg in emote['messages']:
+                await message.channel.send(msg)
 
     if message.content.startswith('>hentai '):
         msg = message.content[8:]
