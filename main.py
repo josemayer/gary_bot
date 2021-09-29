@@ -345,6 +345,23 @@ async def on_message(message):
             voice.stop()
             await message.channel.send(":arrow_down_small: A fila de reprodução chegou ao fim!")
 
+    if message.content == '>pause':
+        voice = discord.utils.get(client.voice_clients, guild=message.guild)
+
+        if voice == None:
+            await message.channel.send(":exclamation: O bot não está tocando nenhuma música no momento")
+            return
+
+        voice.pause()
+
+    if message.content == '>resume':
+        voice = discord.utils.get(client.voice_clients, guild=message.guild)
+
+        if voice == None:
+            await message.channel.send(":exclamation: O bot não está tocando nenhuma música no momento")
+            return
+
+        voice.resume()
 
     if message.content == '>leave':
         if len(mq_info) > 0:
