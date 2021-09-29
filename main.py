@@ -43,6 +43,13 @@ mq_info = []
 
 # ==================================
 
+# ===== STATE VARIABLES =====
+
+voluntary_pause = False
+
+# ===========================
+
+
 # ===== GENERAL FUNCTIONS =====
 
 def correct_name(city):
@@ -138,7 +145,7 @@ def get_playlist_info(url, requester):
     return (playlist_info, list_info)
 
 def valid_playlist_link(url):
-    if url.find("&list=") != -1:
+    if url.find("&list=") != -1 or url.find("?list=") != -1:
         return True
     return False
 
@@ -241,6 +248,10 @@ async def on_message(message):
             else:
                 vc = voice
 
+            if vc.is_playing() or voluntary_pause:
+                await message.channel.send(":exclamation: O bot já está reproduzindo no momento!")
+                return
+
             audio = join_audio.getbestaudio().url
             vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
            
@@ -294,8 +305,8 @@ async def on_message(message):
             while len(mq) > 0:
                 audio = mq[0].getbestaudio().url
                 vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
-        
-                while vc.is_playing():
+            
+                while vc.is_playing() or voluntary_pause:
                     await asyncio.sleep(1)
 
                 mq.pop(0)
@@ -351,8 +362,10 @@ async def on_message(message):
         if voice == None:
             await message.channel.send(":exclamation: O bot não está tocando nenhuma música no momento")
             return
-
+        
+        voluntary_pause = True
         voice.pause()
+        await message.channel.send(":pause_button: Música pausada")
 
     if message.content == '>resume':
         voice = discord.utils.get(client.voice_clients, guild=message.guild)
@@ -360,8 +373,10 @@ async def on_message(message):
         if voice == None:
             await message.channel.send(":exclamation: O bot não está tocando nenhuma música no momento")
             return
-
+        
         voice.resume()
+        voluntary_pause = False
+        await message.channel.send(":arrow_forward: Música despausada")
 
     if message.content == '>leave':
         if len(mq_info) > 0:
