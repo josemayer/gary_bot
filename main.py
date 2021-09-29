@@ -331,7 +331,7 @@ async def on_message(message):
         voice = discord.utils.get(client.voice_clients, guild=message.guild)
 
         if voice == None:
-            await message.channel.send("O bot não está tocando nenhuma música no momento")
+            await message.channel.send(":exclamation: O bot não está tocando nenhuma música no momento")
             return
         
         if len(mq) > 1:
@@ -340,8 +340,10 @@ async def on_message(message):
             mq_info.pop(0)
             audio = mq[0].getbestaudio().url
             voice.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
+            await message.channel.send(":fast_forward: **Pulando para**: `" + mq_innfo[0]['name'] + "`")
         else:
             voice.stop()
+            await message.channel.send(":arrow_down_small: A fila de reprodução chegou ao fim!")
 
 
     if message.content == '>leave':
