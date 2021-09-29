@@ -340,7 +340,7 @@ async def on_message(message):
             mq_info.pop(0)
             audio = mq[0].getbestaudio().url
             voice.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
-            await message.channel.send(":fast_forward: **Pulando para**: `" + mq_innfo[0]['name'] + "`")
+            await message.channel.send(":fast_forward: **Pulando para**: `" + mq_info[0]['name'] + "`")
         else:
             voice.stop()
             await message.channel.send(":arrow_down_small: A fila de reprodução chegou ao fim!")
