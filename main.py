@@ -121,6 +121,10 @@ def get_playlist_info(url, requester):
         r = ydl.extract_info(url, download=False)
     list_info = []
 
+    playlist_info = {}
+    playlist_info['name'] = r['title']
+    playlist_info['length'] = len(r['entries'])
+
     for music in r['entries']:
         info = {}
         info['name'] = music['title']
@@ -131,7 +135,7 @@ def get_playlist_info(url, requester):
         info['requester'] = requester
         list_info.append(info)
 
-    return list_info
+    return (playlist_info, list_info)
 
 def valid_playlist_link(url):
     if url.find("&list=") != -1:
@@ -264,7 +268,7 @@ async def on_message(message):
             mq_info.append(video_info)
             join_audio = new(video_info['link'])
         else:
-            video_info = get_playlist_info(link, author.name)
+            playlist_info, video_info = get_playlist_info(link, author.name)
             for music in video_info:
                 mq_info.append(music)
             join_audio = new(video_info[0]['link'])
@@ -277,7 +281,7 @@ async def on_message(message):
                 for music in video_info:
                     join_music_audio = new(music['link'])
                     mq.append(join_music_audio)
-                await message.channel.send("> :arrow_double_down: **Adicionado à fila** : `playlist X`")
+                await message.channel.send("> :arrow_double_down: **Adicionado à fila** : " + str(playlist_info['length']) + " músicas de `" + playlist_info['name'] + "`")
         else:
             if not playlist:
                 mq.append(join_audio)
@@ -286,7 +290,7 @@ async def on_message(message):
                 for music in video_info:
                     join_music_audio = new(music['link'])
                     mq.append(join_music_audio)
-                await message.channel.send("> :arrow_double_down: **Adicionado à fila** : `playlist X`")
+                await message.channel.send("> :arrow_double_down: **Adicionado à fila** : " + str(playlist_info['length']) + " músicas de `" + playlist_info['name'] + "`")
             while len(mq) > 0:
                 audio = mq[0].getbestaudio().url
                 vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
