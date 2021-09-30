@@ -114,20 +114,6 @@ def valid_playlist_link(url):
         return True
     return False
 
-def format_playlist_link(url):
-    position = url.find("list=")
-    playlist_id = ""
-    if position != -1:
-        playlist_id = url[position + 5:]
-        position = playlist_id.find("&")
-        if position != -1:
-            playlist_id = playlist_id[:position]
-
-    if playlist_id == "":
-        return ""
-    else:
-        return "https://www.youtube.com/playlist?list=" + playlist_id
-
 # =============================
 
 @client.event
