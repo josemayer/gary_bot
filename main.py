@@ -5,7 +5,7 @@ import asyncio
 import json
 import numpy as np
 from discord import FFmpegPCMAudio
-from pafy import new, get_playlist
+from pafy import new
 from pytube import Playlist
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
