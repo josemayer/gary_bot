@@ -241,7 +241,7 @@ async def on_message(message):
             else:
                 vc = voice
 
-            if vc.is_playing() or voluntary_pause:
+            if vc.is_playing() or vc.is_paused():
                 await message.channel.send(":exclamation: O bot já está reproduzindo no momento!")
                 return
 
@@ -280,20 +280,24 @@ async def on_message(message):
         if len(mq) > 0:
             if not playlist:
                 mq.append(join_audio)
+                print(join_audio.Title)
                 await message.channel.send("> :arrow_double_down: **Adicionado à fila** [" + str(len(mq)) + "] : `" + video_info['name'] + "`")
             else:
                 for music in video_info:
                     join_music_audio = new(music['link'])
-                    mq.append(join_music_audio)
+                    mq.append(join_music_audio['Title'])
+                    print(join_music_audio.Title)
                 await message.channel.send("> :arrow_double_down: **Adicionado à fila** : " + str(playlist_info['length']) + " músicas de `" + playlist_info['name'] + "`")
         else:
             if not playlist:
                 mq.append(join_audio)
+                print(join_audio.Title)
                 await message.channel.send("> :notes: **Tocando** :notes: : `" + video_info['name'] + "`")
             else:
                 for music in video_info:
                     join_music_audio = new(music['link'])
                     mq.append(join_music_audio)
+                    print(join_music_audio.Title)
                 await message.channel.send("> :arrow_double_down: **Adicionado à fila** : " + str(playlist_info['length']) + " músicas de `" + playlist_info['name'] + "`")
             while len(mq) > 0:
                 audio = mq[0].getbestaudio().url
