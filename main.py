@@ -119,6 +119,29 @@ def format_duration(duration):
         return duration[3:]
     return duration
 
+def total_queue_duration(queue):
+    total_sec = 0
+    total_min = 0
+    total_hour = 0
+    for music in queue:
+        seconds = int(music.duration[-2:])
+        minutes = int(music.duration[-5:-3])
+        hours = int(music.duration[-8:-6])
+
+        total_sec += seconds
+        total_min += minutes
+        total_hour += hours
+
+    final_sec = total_sec % 60
+    total_min += total_sec // 60
+
+    final_min = total_min % 60
+    total_hour += total_min // 60
+
+    final_hour = total_hour
+    
+    return str("{:02d}".format(final_hour)) + ":" + str("{:02d}".format(final_min)) + ":" + str("{:02d}".format(final_sec))
+
 # =============================
 
 @client.event
@@ -298,17 +321,17 @@ async def on_message(message):
         queue_info = ""
         i = 1
 
-        current_track = str(i) + ". `" + queue[0].title + "` (" + format_duration(queue[0].duration) + ")"
+        current_track = "`" + str(i) + ".` [" + queue[0].title + "](https://www.youtube.com/watch?v=" + queue[0].videoid + ") `(" + format_duration(queue[0].duration) + ")`"
         i += 1
 
-        for music in queue[1:10]:
-            queue_info += str(i) + ". `" + music.title + "` (" + format_duration(music.duration) + ")\n\n"
+        for music in queue[1:7]:
+            queue_info += "`" + str(i) + ".` [" + music.title + "](https://www.youtube.com/watch?v=" + music.videoid + ") `(" + format_duration(music.duration) + ")`\n"
             i += 1
 
         embed = discord.Embed(title=f":loud_sound: Tocando agora", description=current_track, color=0x7b0ec9)
         if queue_info != "":
             embed.add_field(name=f":headphones: Lista de reprodução", value=queue_info, inline=False)
-            embed.add_field(name=f"{len(mq)} músicas na fila.", value="", inline=False)
+            embed.add_field(name=f"{len(mq)} músicas na fila.", value=f"Duração total esperada: {format_duration(total_queue_duration(mq))}", inline=False)
 
         await message.channel.send(embed=embed)
 
