@@ -43,13 +43,6 @@ mq_info = []
 
 # ==================================
 
-# ===== STATE VARIABLES =====
-
-voluntary_pause = False
-
-# ===========================
-
-
 # ===== GENERAL FUNCTIONS =====
 
 def correct_name(city):
@@ -306,7 +299,7 @@ async def on_message(message):
                 audio = mq[0].getbestaudio().url
                 vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
             
-                while vc.is_playing() or voluntary_pause:
+                while vc.is_playing() or vc.is_paused():
                     await asyncio.sleep(1)
 
                 mq.pop(0)
@@ -363,7 +356,6 @@ async def on_message(message):
             await message.channel.send(":exclamation: O bot não está tocando nenhuma música no momento")
             return
         
-        voluntary_pause = True
         voice.pause()
         await message.channel.send(":pause_button: Música pausada")
 
@@ -375,7 +367,6 @@ async def on_message(message):
             return
         
         voice.resume()
-        voluntary_pause = False
         await message.channel.send(":arrow_forward: Música despausada")
 
     if message.content == '>leave':
