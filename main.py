@@ -114,6 +114,11 @@ def valid_playlist_link(url):
         return True
     return False
 
+def format_duration(duration):
+    if duration[:2] == "00":
+        return duration[3:]
+    return duration
+
 # =============================
 
 @client.event
@@ -293,16 +298,17 @@ async def on_message(message):
         queue_info = ""
         i = 1
 
-        current_track = str(i) + ". `" + queue[0].title + "` (" + queue[0].duration + ")"
+        current_track = str(i) + ". `" + queue[0].title + "` (" + format_duration(queue[0].duration) + ")"
         i += 1
 
         for music in queue[1:10]:
-            queue_info += str(i) + ". `" + music.title + "` (" + music.duration + ")\n"
+            queue_info += str(i) + ". `" + music.title + "` (" + format_duration(music.duration) + ")\n\n"
             i += 1
 
         embed = discord.Embed(title=f":loud_sound: Tocando agora", description=current_track, color=0x7b0ec9)
         if queue_info != "":
             embed.add_field(name=f":headphones: Lista de reprodução", value=queue_info, inline=False)
+            embed.add_field(name=f"{len(mq)} músicas na fila.", value="", inline=False)
 
         await message.channel.send(embed=embed)
 
