@@ -5,7 +5,8 @@ import asyncio
 import json
 import numpy as np
 from discord import FFmpegPCMAudio
-from pafy import new
+from pafy import new, get_playlist
+from pytube import Playlist
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 from youtube_dl import YoutubeDL
@@ -39,7 +40,6 @@ ydl_opt = {'format': 'bestaudio', 'quiet': 'True'}
 # ===== INITIALIZE MUSIC QUEUE =====
 
 mq = []
-mq_info = []
 
 # ==================================
 
@@ -103,44 +103,30 @@ def treat_links(url):
         url = "https://" + url[2:]
     return url
 
-def get_youtube_info(url, requester):
+def get_youtube_link(search):
     with YoutubeDL(ydl_opt) as ydl:
-            r = ydl.extract_info(f"ytsearch:{url}", download=False)['entries'][0]
-    info = {}
-    info['name'] = r['title']
-    info['duration'] = r['duration']
-    dur_mins = str(r['duration'] // 60) + ":" + str("{:02d}".format(r['duration'] % 60))
-    info['duration_str'] = dur_mins
-    info['link'] = r['webpage_url']
-    info['requester'] = requester
-
-    return info
-
-def get_playlist_info(url, requester):
-    with YoutubeDL(ydl_opt) as ydl:
-        r = ydl.extract_info(url, download=False)
-    list_info = []
-
-    playlist_info = {}
-    playlist_info['name'] = r['title']
-    playlist_info['length'] = len(r['entries'])
-
-    for music in r['entries']:
-        info = {}
-        info['name'] = music['title']
-        info['duration'] = music['duration']
-        dur_mins = str(music['duration'] // 60) + ":" + str("{:02d}".format(music['duration'] % 60))
-        info['duration_str'] = dur_mins
-        info['link'] = music['webpage_url']
-        info['requester'] = requester
-        list_info.append(info)
-
-    return (playlist_info, list_info)
+            r = ydl.extract_info(f"ytsearch:{search}", download=False)['entries'][0]
+    link = "https://www.youtube.com/watch?v=" + r['id']
+    return link
 
 def valid_playlist_link(url):
     if url.find("&list=") != -1 or url.find("?list=") != -1:
         return True
     return False
+
+def format_playlist_link(url):
+    position = url.find("list=")
+    playlist_id = ""
+    if position != -1:
+        playlist_id = url[position + 5:]
+        position = playlist_id.find("&")
+        if position != -1:
+            playlist_id = playlist_id[:position]
+
+    if playlist_id == "":
+        return ""
+    else:
+        return "https://www.youtube.com/playlist?list=" + playlist_id
 
 # =============================
 
@@ -250,9 +236,10 @@ async def on_message(message):
            
             await asyncio.sleep(sound['time'])
 
-            for vc in client.voice_clients:
-                if vc.guild == message.guild:
-                    await vc.disconnect()
+            if vc != None:
+                for vc in client.voice_clients:
+                    if vc.guild == message.guild:
+                        await vc.disconnect()
 
     if message.content.startswith(">play "):
         link = message.content[6:]
@@ -268,46 +255,44 @@ async def on_message(message):
             vc = voice
         
         if not playlist:
-            video_info = get_youtube_info(link, author.name)
-            mq_info.append(video_info)
-            join_audio = new(video_info['link'])
+            join_audio = new(get_youtube_link(link))
         else:
-            playlist_info, video_info = get_playlist_info(link, author.name)
-            for music in video_info:
-                mq_info.append(music)
-            join_audio = new(video_info[0]['link'])
+            playlist_info = Playlist(link)
+
+            if len(playlist_info) == 0:
+                await message.channel.send(":question: Ocorreu um erro inesperado com a playlist!")
+                return
+
+            join_audio = new(playlist_info[0])
 
         if len(mq) > 0:
             if not playlist:
                 mq.append(join_audio)
-                print(join_audio.Title)
-                await message.channel.send("> :arrow_double_down: **Adicionado à fila** [" + str(len(mq)) + "] : `" + video_info['name'] + "`")
+                await message.channel.send("> :arrow_double_down: **Adicionado à fila** [" + str(len(mq)) + "] : `" + join_audio.title + "`")
             else:
-                for music in video_info:
-                    join_music_audio = new(music['link'])
-                    mq.append(join_music_audio['Title'])
-                    print(join_music_audio.Title)
-                await message.channel.send("> :arrow_double_down: **Adicionado à fila** : " + str(playlist_info['length']) + " músicas de `" + playlist_info['name'] + "`")
+                for music in playlist_info:
+                    join_music_audio = new(music)
+                    mq.append(join_music_audio)
+                await message.channel.send("> :arrow_double_down: **Adicionado à fila** : " + str(len(playlist_info)) + " músicas de `" + playlist_info.title + "`")
         else:
             if not playlist:
                 mq.append(join_audio)
-                print(join_audio.Title)
-                await message.channel.send("> :notes: **Tocando** :notes: : `" + video_info['name'] + "`")
+                await message.channel.send("> :notes: **Tocando** :notes: : `" + join_audio.title + "`")
             else:
-                for music in video_info:
-                    join_music_audio = new(music['link'])
+                for music in playlist_info:
+                    join_music_audio = new(music)
                     mq.append(join_music_audio)
-                    print(join_music_audio.Title)
-                await message.channel.send("> :arrow_double_down: **Adicionado à fila** : " + str(playlist_info['length']) + " músicas de `" + playlist_info['name'] + "`")
+                await message.channel.send("> :arrow_double_down: **Adicionado à fila** : " + str(len(playlist_info)) + " músicas de `" + playlist_info.title + "`")
+            
             while len(mq) > 0:
                 audio = mq[0].getbestaudio().url
                 vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
             
                 while vc.is_playing() or vc.is_paused():
                     await asyncio.sleep(1)
-
-                mq.pop(0)
-                mq_info.pop(0)
+                
+                if len(mq) > 0:
+                    mq.pop(0)
 
             for vc in client.voice_clients:
                 if vc.guild == message.guild:
@@ -318,15 +303,15 @@ async def on_message(message):
             await message.channel.send("A fila de reprodução está vazia!")
             return
 
-        queue = np.array(mq_info)
+        queue = np.array(mq)
         queue_info = ""
         i = 1
 
-        current_track = str(i) + ". `" + queue[0]['name'] + "` (" + queue[0]['duration_str'] + ") - solicitado por " + queue[0]['requester'] + "\n\n"
+        current_track = str(i) + ". `" + queue[0].title + "` (" + queue[0].duration + ")"
         i += 1
 
         for music in queue[1:10]:
-            queue_info += str(i) + ". `" + music['name'] + "` (" + music['duration_str'] + ") - solicitado por " + music['requester'] + "\n"
+            queue_info += str(i) + ". `" + music.title + "` (" + music.duration + ")\n"
             i += 1
 
         embed = discord.Embed(title=f":loud_sound: Tocando agora", description=current_track, color=0x7b0ec9)
@@ -345,10 +330,9 @@ async def on_message(message):
         if len(mq) > 1:
             voice.pause()
             mq.pop(0)
-            mq_info.pop(0)
             audio = mq[0].getbestaudio().url
             voice.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
-            await message.channel.send(":fast_forward: **Pulando para**: `" + mq_info[0]['name'] + "`")
+            await message.channel.send(":fast_forward: **Pulando para**: `" + mq[0].title + "`")
         else:
             voice.stop()
             await message.channel.send(":arrow_down_small: A fila de reprodução chegou ao fim!")
@@ -374,13 +358,19 @@ async def on_message(message):
         await message.channel.send(":arrow_forward: Música despausada")
 
     if message.content == '>leave':
-        if len(mq_info) > 0:
-            mq.clear()
-            mq_info.clear()
+        voice = discord.utils.get(client.voice_clients, guild=message.guild)
+        
+        if voice != None:
+            voice.stop()
 
-        for vc in client.voice_clients:
-            if vc.guild == message.guild:
-                await vc.disconnect()
+            if len(mq) > 0:
+                mq.clear()
+
+            for vc in client.voice_clients:
+                if vc.guild == message.guild:
+                    await vc.disconnect()
+        else:
+            await message.channel.send("O bot não está conectado!")
 
 @client.event
 async def on_connect():
