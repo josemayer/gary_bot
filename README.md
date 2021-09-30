@@ -15,3 +15,7 @@ Lorem ipsum dolor sit amet
 
 ### Music
 Lorem ipsum dolor sit amet
+
+## To-do list
+- Add shuffle, move and remove commands (queue operations).
+- Add pagination to the queue command.
