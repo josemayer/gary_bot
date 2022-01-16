@@ -1,15 +1,15 @@
 import discord
+from discord_components import DiscordComponents, Button, ButtonStyle
 import os
 import requests
 import asyncio
 import json
 import numpy as np
+from time import strftime, gmtime
 from discord import FFmpegPCMAudio
-from pafy import new
-from pytube import Playlist
+from pytube import Playlist, Search, YouTube
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
-from youtube_dl import YoutubeDL
 import sys
 sys.path.append('functions/')
 from tictactoe import saveImageTTT
@@ -30,10 +30,6 @@ with open('commands/data.json') as data:
     data.close()
 
 # ===========================
-
-# ===== YOUTUBE-DL OPTIONS =====
-
-ydl_opt = {'format': 'bestaudio', 'quiet': 'True'}
 
 # ==============================
 
@@ -103,44 +99,22 @@ def treat_links(url):
         url = "https://" + url[2:]
     return url
 
-def get_youtube_link(search):
-    with YoutubeDL(ydl_opt) as ydl:
-            r = ydl.extract_info(f"ytsearch:{search}", download=False)['entries'][0]
-    link = "https://www.youtube.com/watch?v=" + r['id']
-    return link
-
 def valid_playlist_link(url):
     if url.find("&list=") != -1 or url.find("?list=") != -1:
         return True
     return False
 
 def format_duration(duration):
-    if duration[:2] == "00":
-        return duration[3:]
-    return duration
+    if (duration > 3600):
+        return strftime("%H:%M:%S", gmtime(duration))
+    return strftime("%M:%S", gmtime(duration))
 
 def total_queue_duration(queue):
     total_sec = 0
-    total_min = 0
-    total_hour = 0
     for music in queue:
-        seconds = int(music.duration[-2:])
-        minutes = int(music.duration[-5:-3])
-        hours = int(music.duration[-8:-6])
+        total_sec += music.length;
 
-        total_sec += seconds
-        total_min += minutes
-        total_hour += hours
-
-    final_sec = total_sec % 60
-    total_min += total_sec // 60
-
-    final_min = total_min % 60
-    total_hour += total_min // 60
-
-    final_hour = total_hour
-    
-    return str("{:02d}".format(final_hour)) + ":" + str("{:02d}".format(final_min)) + ":" + str("{:02d}".format(final_sec))
+    return str(total_sec)
 
 # =============================
 
@@ -214,7 +188,7 @@ async def on_message(message):
         os.remove('assets/imgs/msg.png')
 
     if message.content == '>join':
-        join_audio = new("https://www.youtube.com/watch?v=EVVp0J1-aU8")
+        join_audio = YouTube("https://www.youtube.com/watch?v=EVVp0J1-aU8")
         author = message.author
         channel = author.voice.channel
 
@@ -225,13 +199,13 @@ async def on_message(message):
             return
 
         vc = await channel.connect()
-        audio = join_audio.getbestaudio().url
+        audio = join_audio.streams.get_audio_only().url
         vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
         vc.is_playing()
     
     for sound in sounds_list:
         if message.content == '>' + sound['command']:
-            join_audio = new(sound['link'])
+            join_audio = YouTube(sound['link'])
             author = message.author
             channel = author.voice.channel
 
@@ -245,7 +219,7 @@ async def on_message(message):
                 await message.channel.send(":exclamation: O bot já está reproduzindo no momento!")
                 return
 
-            audio = join_audio.getbestaudio().url
+            audio = join_audio.streams.get_audio_only().url
             vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
            
             await asyncio.sleep(sound['time'])
@@ -269,37 +243,37 @@ async def on_message(message):
             vc = voice
         
         if not playlist:
-            join_audio = new(get_youtube_link(link))
+            primeiro_result = Search(link).results[0]
+            join_audio = primeiro_result
         else:
             playlist_info = Playlist(link)
+            playlist_musics = playlist_info.videos
 
             if len(playlist_info) == 0:
                 await message.channel.send(":question: Ocorreu um erro inesperado com a playlist!")
                 return
 
-            join_audio = new(playlist_info[0])
+            join_audio = playlist_musics[0]
 
         if len(mq) > 0:
             if not playlist:
                 mq.append(join_audio)
                 await message.channel.send("> :arrow_double_down: **Adicionado à fila** [" + str(len(mq)) + "] : `" + join_audio.title + "`")
             else:
-                for music in playlist_info:
-                    join_music_audio = new(music)
-                    mq.append(join_music_audio)
+                for music in playlist_musics:
+                    mq.append(music)
                 await message.channel.send("> :arrow_double_down: **Adicionado à fila** : " + str(len(playlist_info)) + " músicas de `" + playlist_info.title + "`")
         else:
             if not playlist:
                 mq.append(join_audio)
                 await message.channel.send("> :notes: **Tocando** :notes: : `" + join_audio.title + "`")
             else:
-                for music in playlist_info:
-                    join_music_audio = new(music)
-                    mq.append(join_music_audio)
+                for music in playlist_musics:
+                    mq.append(music)
                 await message.channel.send("> :arrow_double_down: **Adicionado à fila** : " + str(len(playlist_info)) + " músicas de `" + playlist_info.title + "`")
             
             while len(mq) > 0:
-                audio = mq[0].getbestaudio().url
+                audio = mq[0].streams.get_audio_only().url
                 vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
             
                 while vc.is_playing() or vc.is_paused():
@@ -321,17 +295,17 @@ async def on_message(message):
         queue_info = ""
         i = 1
 
-        current_track = "`" + str(i) + ".` [" + queue[0].title + "](https://www.youtube.com/watch?v=" + queue[0].videoid + ") `(" + format_duration(queue[0].duration) + ")`"
+        current_track = "`" + str(i) + ".` [" + queue[0].title + "](" + queue[0].watch_url + ") `(" + format_duration(queue[0].length) + ")`"
         i += 1
 
         for music in queue[1:7]:
-            queue_info += "`" + str(i) + ".` [" + music.title + "](https://www.youtube.com/watch?v=" + music.videoid + ") `(" + format_duration(music.duration) + ")`\n"
+            queue_info += "`" + str(i) + ".` [" + music.title + "](" + music.watch_url + ") `(" + format_duration(music.length) + ")`\n"
             i += 1
 
         embed = discord.Embed(title=f":loud_sound: Tocando agora", description=current_track, color=0x7b0ec9)
         if queue_info != "":
             embed.add_field(name=f":headphones: Lista de reprodução", value=queue_info, inline=False)
-            embed.add_field(name=f"{len(mq)} músicas na fila.", value=f"Duração total esperada: {format_duration(total_queue_duration(mq))}", inline=False)
+            embed.add_field(name=f"{len(mq)} músicas na fila.", value=f"Duração total média esperada: entre {format_duration(len(mq)*180)} e {format_duration(len(mq)*300)}", inline=False)
 
         await message.channel.send(embed=embed)
 
@@ -345,7 +319,7 @@ async def on_message(message):
         if len(mq) > 1:
             voice.pause()
             mq.pop(0)
-            audio = mq[0].getbestaudio().url
+            audio = mq[0].streams.get_audio_only().url
             voice.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
             await message.channel.send(":fast_forward: **Pulando para**: `" + mq[0].title + "`")
         else:
@@ -371,7 +345,36 @@ async def on_message(message):
         
         voice.resume()
         await message.channel.send(":arrow_forward: Música despausada")
+    
+    if message.content == '>shuffle':
+        if (len(mq) > 1):
+            mq_slice = mq[1:]
+            np.random.shuffle(mq_slice)
+            mq[1:] = mq_slice
 
+            await message.channel.send(":twisted_rightwards_arrows: A fila de reprodução foi embaralhada!")
+        else:
+            await message.channel.send(":exclamation: A fila é pequena demais para ser embaralhada!")
+
+    if message.content.startswith(">move "):
+        par = message.content[6:]
+        num_at, num_to = par.split()
+
+        if (num_at.isdigit() and num_to.isdigit()):
+            num_at = int(num_at)
+            num_to = int(num_to)
+            if (1 < num_at <= len(mq) and 1 < num_to <= len(mq)):
+                music_at = mq[num_at - 1]
+                temp = mq.pop(num_at - 1)
+                mq.insert(num_to - 1, temp)
+                await message.channel.send(":left_right_arrow: **Movendo** `" + music_at.title + "` **para** `" + str(num_to) + "`")
+                return
+            else:
+                await message.channel.send(":exclamation: Há números de posição maiores que a fila ou menores que 2")
+                return
+        else:
+            await message.channel.send(":exclamation: Os pares não são adequados")
+            return
     if message.content == '>leave':
         voice = discord.utils.get(client.voice_clients, guild=message.guild)
         
