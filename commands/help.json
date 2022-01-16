@@ -1,0 +1,134 @@
+{
+  "gerais": {
+    "title": "Comandos Gerais",
+    "content": [   
+      { 
+        "header": "**>report** *<nome de uma cidade>*",
+        "desc": "Gera um relatório com os dados climáticos e de fuso horário da cidade especificada."
+      },
+      {
+        "header": "**>matchs** *<nome de um invocador>*",
+        "desc": "Mostra o histórico das últimas 10 partidas de League of Legends do jogador especificado."
+      },
+      {
+        "header": "**>join**",
+        "desc": "Acessa o canal de voz do usuário."
+      },
+      {
+        "header": "**>leave**",
+        "desc": "Desconecta do canal de voz em que está conectado."
+      },
+      {
+        "header": "**>ttt** *<mensagem>*",
+        "desc": "Gera uma mensagem codificada na simbologia tic-tac-toe, construída baseada [nesta tabela](https://i.imgur.com/3fifBia.png)."
+      },
+      {
+        "header": "**>hentai** *<nome de um personagem>*",
+        "desc": "ʕ•́ᴥ•̀ʔ"
+      }
+    ]
+  },
+  "club_penguin": {
+    "title": "Comandos do Club Penguin",
+    "content": [
+      {
+        "header": "**>bless**",
+        "desc": ""
+      },
+      {
+        "header": "**>clovys**",
+        "desc": ""
+      },
+      {
+        "header": "**>cone**",
+        "desc": ""
+      },
+      {
+        "header": "**>pedro**",
+        "desc": ""
+      },
+      {
+        "header": "**>ulisses**",
+        "desc": ""
+      },
+      {
+        "header": "**>victor**",
+        "desc": ""
+      },
+      {
+        "header": "**>vs**",
+        "desc": ""
+      },
+      {
+        "header": "**>ze**",
+        "desc": ""
+      }
+    ]
+  },
+  "vinhetas": {
+    "title": "Comandos de Vinheta",
+    "content": [
+      {
+        "header": "**>cavalo**",
+        "desc": ""
+      },
+      {
+        "header": "**>btv**",
+        "desc": ""
+      },
+      {
+        "header": "**>defuse**",
+        "desc": ""
+      },
+      {
+        "header": "**>plant**",
+        "desc": ""
+      },
+      {
+        "header": "**>jumpscare**",
+        "desc": ""
+      },
+      {
+        "header": "**>fortnite**",
+        "desc": ""
+      }
+    ]
+  },
+  "musica": {
+    "title": "Comandos de Música",
+    "content": [
+      {
+        "header": "**>play** *<link do youtube/nome>*",
+        "desc": "Toca a música do YouTube com o link ou nome fornecido. Esse comando também suporta link de playlists."
+      },
+      {
+        "header": "**>queue**",
+        "desc": "Mostra a fila de reprodução"
+      },
+      {
+        "header": "**>skip**",
+        "desc": "Pula a música atual para a próxima faixa da lista de reprodução."
+      },
+      {
+        "header": "**>pause**",
+        "desc": "Pausa a música"
+      },
+      {
+        "header": "**>resume**",
+        "desc": "Despausa a música"
+      },
+      {
+        "header": "**>move** *<posição atual>* *<posição de destino>*",
+        "desc": "Move uma música da posição atual para a posição de destino na fila de reprodução."
+      },
+      {
+        "header": "**>remove** *<posição>*",
+        "desc": "Remove a música correspondente à posição da fila de reprodução."
+      },
+      {
+        "header": "**>shuffle**",
+        "desc": "Embaralha a fila de reprodução"
+      }
+    ]
+  }
+}
