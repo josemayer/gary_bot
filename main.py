@@ -29,6 +29,11 @@ with open('commands/data.json') as data:
     emotes_list = d['emotes']
     data.close()
 
+with open('commands/help.json') as data:
+    d = json.loads(data.read())
+    help_comms = d
+    data.close()
+
 # ===========================
 
 # ==============================
@@ -119,19 +124,150 @@ def total_queue_duration(queue):
 # =============================
 
 @client.event
+async def on_ready():
+    DiscordComponents(client)
+    await client.change_presence(activity=discord.Game(name=">help"))
+
+@client.event
 async def on_message(message):
     if message.author == client.user:
         return
     
     if message.content.startswith('>help'):
+        totalPages = len(help_comms)
         embed = discord.Embed(title=f":microscope: Gary Bot", description=f"Olá, agente! Meu nome é Gary, o pinguim inventor! Fui recrutado para executar pequenas missões cotidianas que lhe podem ser úteis. Se restarem dúvidas, não hesite em me contatar pelo celular da EPF. Estarei na minha oficina!", color=0x003366)
         embed.set_thumbnail(url='https://i.imgur.com/fWskrI4.png')
-        embed.add_field(name=f"Comandos gerais", value=f"`1.` **>report** *<nome de uma cidade>*\n > Gera um relatório com os dados climáticos e de fuso horário da cidade especificada.\n`2.` **>matchs** *<nome de um invocador>*\n > Mostra o histórico das últimas 10 partidas de League of Legends do jogador especificado.\n`3.` **>join**\n > Acessa o canal de voz do usuário.\n`4.` **>leave**\n > Desconecta do canal de voz em que está conectado.\n`5.` **>ttt** *<mensagem>*\n > Gera uma mensagem codificada na simbologia tic-tac-toe, construída baseada [nesta tabela](https://i.imgur.com/3fifBia.png).\n`6.` **>hentai** *<nome de um personagem>*\n > ʕ•́ᴥ•̀ʔ", inline=False)
-        embed.add_field(name=f"Comandos do Club Penguin", value=f"`1.` **>bless**\n`2.` **>clovys**\n`3.` **>cone**\n`4.` **>pedro**\n`5.` **>ulisses**\n`6.` **>victor**\n`7.` **>vs**\n`8.` **>ze**", inline=False)
-        embed.add_field(name=f"Comandos de Vinheta", value=f"`1.` **>cavalo**\n`2.` **>btv**\n`3.` **>defuse**\n`4.` **>plant**\n`5.` **>jumpscare**\n`6.` **>fortnite**", inline=False)
-        embed.add_field(name=f"Comandos de Música", value=f"`1.` **>play** *<link do youtube>*\n > Toca a música do youtube com o link fornecido.\n`2.` **>queue**\n > Mostra a fila de reprodução.", inline=False)
+        
+        current = 1
+    
+        i = 1
+        for item in help_comms:
+            if current == i:
+                j = 1
+                valueField = f""
+                for command in help_comms[item]['content']:
+                    descCommand = f""
+                    if command['desc'] != "":
+                        descCommand = f"> {command['desc']}\n"
+                    valueField += f"`{str(j)}.` {command['header']}\n" + descCommand
+                    j += 1
+                embed.add_field(name=help_comms[item]['title'], value=valueField, inline=False)
+            i += 1
+
         embed.set_footer(text=f"{client.user}: Quantos pares de meia eu tenho?", icon_url=client.user.avatar_url)    
-        await message.channel.send(embed=embed)
+        mainMsg = await message.channel.send(embed=embed,
+                                    components = [
+                                                [
+                                                Button(
+                                                    label = "<",
+                                                    id = "back",
+                                                    style = ButtonStyle.blue,
+                                                    disabled = True
+                                                ),
+                                                Button(
+                                                    label = f"Página {current}/{totalPages}",
+                                                    id = "cur",
+                                                    style = ButtonStyle.grey,
+                                                    disabled = True
+                                                ),
+                                                Button(
+                                                    label = ">",
+                                                    id = "front",
+                                                    style = ButtonStyle.blue
+                                                )
+                                                ]
+                                            ]
+                                        )
+
+        while True:
+            try:
+                interaction = await client.wait_for(
+                    "button_click",
+                    check = lambda i: i.component.id in ["back", "front"], 
+                    timeout = 10.0 
+                )
+                buttonNext = False
+                buttonPrev = False
+                if interaction.component.id == "back":
+                    current -= 1
+                elif interaction.component.id == "front":
+                    current += 1
+
+                if current >= totalPages:
+                    buttonNext = True
+                elif current <= 1:
+                    buttonPrev = True
+
+                embed.remove_field(0)
+
+                i = 1
+                for item in help_comms:
+                    if current == i:
+                        j = 1
+                        valueField = f""
+                        for command in help_comms[item]['content']:
+                            descCommand = f""
+                            if command['desc'] != "":
+                                descCommand = f"> {command['desc']}\n"
+                            valueField += f"`{str(j)}.` {command['header']}\n" + descCommand
+                            j += 1
+                        embed.insert_field_at(0, name=help_comms[item]['title'], value=valueField, inline=False)
+                    i += 1
+
+                await interaction.respond(
+                    type = 7,
+                    embed = embed,
+                    components = [
+                        [
+                            Button(
+                                label = "<",
+                                id = "back",
+                                style = ButtonStyle.blue,
+                                disabled = buttonPrev
+                            ),
+                            Button(
+                                label = f"Página {current}/{totalPages}",
+                                id = "cur",
+                                style = ButtonStyle.grey,
+                                disabled = True
+                            ),
+                            Button(
+                                label = ">",
+                                id = "front",
+                                style = ButtonStyle.blue,
+                                disabled = buttonNext
+                            )
+                        ]
+                    ]
+                )
+            except asyncio.TimeoutError:
+                await mainMsg.edit(
+                    components = [
+                        [
+                            Button(
+                                label = "<",
+                                id = "back",
+                                style = ButtonStyle.blue,
+                                disabled = True
+                            ),
+                            Button(
+                                label = f"Página {current}/{totalPages}",
+                                id = "cur",
+                                style = ButtonStyle.grey,
+                                disabled = True
+                            ),
+                            Button(
+                                label = ">",
+                                id = "front",
+                                style = ButtonStyle.blue,
+                                disabled = True
+                            )
+                        ]
+                    ]
+                )
+                break
+
+
 
     for emote in emotes_list:
         if message.content == '>' + emote['command']:
@@ -287,6 +423,11 @@ async def on_message(message):
                     await vc.disconnect()
 
     if message.content == '>queue':
+        current = 1;
+        numByPage = 7;
+        firstElement = (numByPage * (current - 1)) + 1
+        totalPages = int(np.ceil((len(mq) - 1) / numByPage))
+
         if len(mq) == 0:
             await message.channel.send("A fila de reprodução está vazia!")
             return
@@ -298,7 +439,7 @@ async def on_message(message):
         current_track = "`" + str(i) + ".` [" + queue[0].title + "](" + queue[0].watch_url + ") `(" + format_duration(queue[0].length) + ")`"
         i += 1
 
-        for music in queue[1:7]:
+        for music in queue[firstElement:firstElement + numByPage]:
             queue_info += "`" + str(i) + ".` [" + music.title + "](" + music.watch_url + ") `(" + format_duration(music.length) + ")`\n"
             i += 1
 
@@ -307,7 +448,115 @@ async def on_message(message):
             embed.add_field(name=f":headphones: Lista de reprodução", value=queue_info, inline=False)
             embed.add_field(name=f"{len(mq)} músicas na fila.", value=f"Duração total média esperada: entre {format_duration(len(mq)*180)} e {format_duration(len(mq)*300)}", inline=False)
 
-        await message.channel.send(embed=embed)
+        mainMsg = await message.channel.send(embed=embed, 
+                                               components = [
+                                                [
+                                                Button(
+                                                    label = "<",
+                                                    id = "back",
+                                                    style = ButtonStyle.blue,
+                                                    disabled = True
+                                                ),
+                                                Button(
+                                                    label = f"Página {current}/{totalPages}",
+                                                    id = "cur",
+                                                    style = ButtonStyle.grey,
+                                                    disabled = True
+                                                ),
+                                                Button(
+                                                    label = ">",
+                                                    id = "front",
+                                                    style = ButtonStyle.blue
+                                                )
+                                                ]
+                                            ]
+                                        )
+        while True:
+            try:
+                interaction = await client.wait_for(
+                    "button_click",
+                    check = lambda i: i.component.id in ["back", "front"], 
+                    timeout = 10.0 
+                )
+                buttonNext = False
+                buttonPrev = False
+                if interaction.component.id == "back":
+                    current -= 1
+                elif interaction.component.id == "front":
+                    current += 1
+
+                if current >= totalPages:
+                    buttonNext = True
+                elif current <= 1:
+                    buttonPrev = True
+                
+                firstElement = (numByPage * (current - 1)) + 1
+                lastElement = firstElement + numByPage
+                if (lastElement > len(mq)):
+                    outOffset = lastElement - len(mq)
+                    lastElement = lastElement - outOffset
+
+                queue_info = ""
+                i = firstElement + 1
+                for music in queue[firstElement:lastElement]:
+                    queue_info += "`" + str(i) + ".` [" + music.title + "](" + music.watch_url + ") `(" + format_duration(music.length) + ")`\n"
+                    i += 1
+
+                embed.remove_field(0) 
+                embed.insert_field_at(0, name=f":headphones: Lista de reprodução", value=queue_info, inline=False)
+    
+                await interaction.respond(
+                    type = 7,
+                    embed = embed,
+                    components = [
+                        [
+                            Button(
+                                label = "<",
+                                id = "back",
+                                style = ButtonStyle.blue,
+                                disabled = buttonPrev
+                            ),
+                            Button(
+                                label = f"Página {current}/{totalPages}",
+                                id = "cur",
+                                style = ButtonStyle.grey,
+                                disabled = True
+                            ),
+                            Button(
+                                label = ">",
+                                id = "front",
+                                style = ButtonStyle.blue,
+                                disabled = buttonNext
+                            )
+                        ]
+                    ]
+                )
+            except asyncio.TimeoutError:
+                await mainMsg.edit(
+                    components = [
+                        [
+                            Button(
+                                label = "<",
+                                id = "back",
+                                style = ButtonStyle.blue,
+                                disabled = True
+                            ),
+                            Button(
+                                label = f"Página {current}/{totalPages}",
+                                id = "cur",
+                                style = ButtonStyle.grey,
+                                disabled = True
+                            ),
+                            Button(
+                                label = ">",
+                                id = "front",
+                                style = ButtonStyle.blue,
+                                disabled = True
+                            )
+                        ]
+                    ]
+                )
+                break
 
     if message.content == '>skip':
         voice = discord.utils.get(client.voice_clients, guild=message.guild)
@@ -373,7 +622,7 @@ async def on_message(message):
                 await message.channel.send(":exclamation: Há números de posição maiores que a fila ou menores que 2")
                 return
         else:
-            await message.channel.send(":exclamation: Os pares não são adequados")
+            await message.channel.send(":exclamation: Os pares não são adequados!")
             return
     if message.content == '>leave':
         voice = discord.utils.get(client.voice_clients, guild=message.guild)
@@ -389,6 +638,22 @@ async def on_message(message):
                     await vc.disconnect()
         else:
             await message.channel.send("O bot não está conectado!")
+
+    if message.content.startswith('>remove '):
+        position = message.content[8:]
+        position = position.replace(" ", "")
+        
+        if position.isdigit():
+            position = int(position)
+            if (1 < position <= len(mq)):
+                music = mq.pop(position - 1)
+                await message.channel.send(":hash: **Removendo** `" + music.title + "` da lista de reprodução!")
+            else:
+                await message.channel.send(":exclamation: O número da posição é maior que a fila ou menor que 2!")
+                return
+        else:
+            await message.channel.send(":exclamation: A posição não é adequada!")
+            return
 
 @client.event
 async def on_connect():
