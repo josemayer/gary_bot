@@ -29,6 +29,11 @@
 			"command": "fortnite",
 			"link": "https://www.youtube.com/watch?v=bmZwsCDibQs",
 			"time": 6.0
+		},
+		{
+			"command": "tuturu",
+			"link": "https://www.youtube.com/watch?v=HkGNeN0LGOE",
+			"time": 4.0
 		}
 	],
 	"emotes": [
