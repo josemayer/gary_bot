@@ -20,6 +20,7 @@ ffmpeg_opts = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_
 
 load_dotenv()
 TOKEN = os.getenv('TOKEN')
+RIOT_API_KEY = os.getenv('RIOT_API_KEY')
 
 # ===== LOAD DATA FILES =====
 
@@ -77,28 +78,61 @@ def get_time(city):
     return date, time
 
 def list_matchs(user):
-    res = requests.get(f'https://br.op.gg/summoner/userName={user}', headers=headers)
-    soup = BeautifulSoup(res.text, 'html.parser')
+    num_partidas = 5
+    request_user = requests.get(f'https://br1.api.riotgames.com/lol/summoner/v4/summoners/by-name/{user}?api_key={RIOT_API_KEY}')
+    user_json = request_user.json()
 
-    verify_list = soup.select('.GameItemList')
-    if verify_list == []:
-        return verify_list
+    if request_user.status_code != 200:
+        return (None, None, None)
 
-    game_attribs = ['.GameItemList .GameType', '.GameItemList .GameResult', '.GameItemList .GameLength', '.GameItemList .KDA .KDA .Kill', '.GameItemList .KDA .KDA .Death', '.GameItemList .KDA .KDA .Assist', '.GameItemList .ChampionName', '.GameItemList .CS .CS', '.GameItemList .Level']
-    game = []
-    for element in game_attribs:
-        game.append(soup.select(element))
-    game_data = []
-    for element in game:
-        array = []
-        for data in element:
-            array.append(data.getText().strip())
-        game_data.append(array)
+    user_puuid = user_json['puuid']
+    user_icon = f"https://opgg-static.akamaized.net/images/profile_icons/profileIcon{user_json['profileIconId']}.jpg"
+    user_name = user_json['name']
 
-    icon_content = soup.select('.ProfileImage')
-    icon = icon_content[0]['src']
-    return icon, game_data
+    request_matchs_id = requests.get(f'https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{user_puuid}/ids?start=0&count={num_partidas}&api_key={RIOT_API_KEY}')
+    matchs_id = request_matchs_id.json()
 
+    games = []
+    for match in matchs_id:
+        request_match = requests.get(f'https://americas.api.riotgames.com/lol/match/v5/matches/{match}?api_key={RIOT_API_KEY}')
+        match_info = request_match.json()
+        
+        # Pega a informação do usuário em específico
+        for participant in match_info['info']['participants']:
+            if participant['puuid'] == user_puuid:
+                user_info = participant
+
+        # Pega a informação de fila
+        queues_info = requests.get(f'https://static.developer.riotgames.com/docs/lol/queues.json').json() 
+        for q_info in queues_info:
+            if q_info['queueId'] == match_info['info']['queueId']:
+                nome_fila = q_info['description'][:-6]
+
+        # Define se foi derrota ou vitória
+        game_result = "Derrota"
+        if user_info['win']:
+            game_result = "Vitória"
+
+        # Prepara o resultado da duração da partida
+        tempo_partida_sec = match_info['info']['gameDuration']
+        tempo_partida = strftime('%H:%M:%S', gmtime(tempo_partida_sec))
+        if tempo_partida_sec < 3600:
+            tempo_partida = tempo_partida[3:]
+
+        array = [nome_fila,
+                 game_result,
+                 tempo_partida,
+                 user_info['kills'],
+                 user_info['deaths'],
+                 user_info['assists'],
+                 user_info['championName'],
+                 user_info['totalMinionsKilled'],
+                 user_info['champLevel']
+                 ]
+
+        games.append(array)
+    return (user_name, user_icon, games) 
+    
 def treat_links(url):
     if url[0:2] == "//":
         url = "https://" + url[2:]
@@ -296,23 +330,23 @@ async def on_message(message):
     if message.content.startswith('>matchs '):
         nickname = message.content[8:]
         if len(nickname) > 0:
-            icon, games = list_matchs(nickname)
+            nickname, icon, games = list_matchs(nickname)
 
-            if games == []:
+            if nickname == None:
                 await message.channel.send(f":question: Invocador não encontrado!")
                 return
 
             embed = discord.Embed(title=f"Histórico de {nickname}", description=f"Partidas recentes de League of Legends de {nickname}", color=0x7b0ec9)
             embed.set_thumbnail(url=treat_links(icon))
-            for j in range(10):
+            for j in range(len(games)):
                 
                 emoji = 'blue_circle'
-                if games[1][j] == 'Defeat':
+                if games[j][1] == 'Derrota':
                     emoji = 'red_circle'
-                elif games[1][j] == 'Victory':
+                elif games[j][1] == 'Vitória':
                     emoji = 'green_circle'
 
-                embed.add_field(name=f":{emoji}: ({games[0][j]}) - {games[1][j]}", value=f"\t**{games[6][j]}**\n~~- -~~\tKDA: {games[3][j]}/{games[4][j]}/{games[5][j]}\n~~- -~~\t{games[8][j]}, {games[7][j]} CS\n~~- -~~\tDuração: {games[2][j]}", inline=False)
+                embed.add_field(name=f":{emoji}: ({games[j][0]}) - {games[j][1]}", value=f"\t**{games[j][6]}**\n~~- -~~\tKDA: {games[j][3]}/{games[j][4]}/{games[j][5]}\n~~- -~~\t Nível {games[j][8]}, {games[j][7]} CS\n~~- -~~\tDuração: {games[j][2]}", inline=False)
             embed.set_footer(text=f"Solicitado por {message.author}", icon_url=message.author.avatar_url)
             
             await message.channel.send(embed=embed)
