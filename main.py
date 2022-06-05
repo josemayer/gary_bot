@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import discord
 from discord_components import DiscordComponents, Button, ButtonStyle
 import os
@@ -24,13 +26,13 @@ RIOT_API_KEY = os.getenv('RIOT_API_KEY')
 
 # ===== LOAD DATA FILES =====
 
-with open('commands/data.json') as data:
+with open('commands/data.json', encoding='utf-8') as data:
     d = json.loads(data.read())
     sounds_list = d['sounds']
     emotes_list = d['emotes']
     data.close()
 
-with open('commands/help.json') as data:
+with open('commands/help.json', encoding='utf-8') as data:
     d = json.loads(data.read())
     help_comms = d
     data.close()
@@ -691,6 +693,6 @@ async def on_message(message):
 
 @client.event
 async def on_connect():
-    print("O bot está em execução!")
+    print("Executando")
 
 client.run(TOKEN)
