@@ -45,7 +45,7 @@ with open('commands/help.json', encoding='utf-8') as data:
 
 # ===== INITIALIZE MUSIC QUEUE =====
 
-mq = []
+mq = {}
 
 # ==================================
 
@@ -386,14 +386,15 @@ async def on_message(message):
         author = message.author
         channel = author.voice.channel
         playlist = valid_playlist_link(link)
-
         voice = discord.utils.get(client.voice_clients, guild=message.guild)
         if voice == None:
             vc = await channel.connect()
             await message.channel.send("> :musical_note: **Gary na área** :musical_note:\n> no canal `" + channel.name + "`")
+            mq[vc.token] = []
         else:
             vc = voice
-        
+        curr_q = mq[vc.token]
+
         if not playlist:
             primeiro_result = Search(link).results[0]
             join_audio = primeiro_result
@@ -407,48 +408,52 @@ async def on_message(message):
 
             join_audio = playlist_musics[0]
 
-        if len(mq) > 0:
+        if len(curr_q) > 0:
             if not playlist:
-                mq.append(join_audio)
+                curr_q.append(join_audio)
                 await message.channel.send("> :arrow_double_down: **Adicionado à fila** [" + str(len(mq)) + "] : `" + join_audio.title + "`")
             else:
                 for music in playlist_musics:
-                    mq.append(music)
+                    curr_q.append(music)
                 await message.channel.send("> :arrow_double_down: **Adicionado à fila** : " + str(len(playlist_info)) + " músicas de `" + playlist_info.title + "`")
         else:
             if not playlist:
-                mq.append(join_audio)
+                curr_q.append(join_audio)
                 await message.channel.send("> :notes: **Tocando** :notes: : `" + join_audio.title + "`")
             else:
                 for music in playlist_musics:
-                    mq.append(music)
+                    curr_q.append(music)
                 await message.channel.send("> :arrow_double_down: **Adicionado à fila** : " + str(len(playlist_info)) + " músicas de `" + playlist_info.title + "`")
             
-            while len(mq) > 0:
-                audio = mq[0].streams.get_audio_only().url
+            while len(curr_q) > 0:
+                audio = curr_q[0].streams.get_audio_only().url
                 vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
             
                 while vc.is_playing() or vc.is_paused():
                     await asyncio.sleep(1)
                 
-                if len(mq) > 0:
-                    mq.pop(0)
+                if len(curr_q) > 0:
+                    curr_q.pop(0)
 
             for vc in client.voice_clients:
                 if vc.guild == message.guild:
+                    mq.pop(vc.token)
                     await vc.disconnect()
 
-    if message.content == '>queue':
-        current = 1;
-        numByPage = 7;
-        firstElement = (numByPage * (current - 1)) + 1
-        totalPages = int(np.ceil((len(mq) - 1) / numByPage))
 
-        if len(mq) == 0:
+    if message.content == '>queue':
+        voice = discord.utils.get(client.voice_clients, guild=message.guild)
+
+        if (voice == None or len(mq[voice.token]) == 0):
             await message.channel.send("A fila de reprodução está vazia!")
             return
 
-        queue = np.array(mq)
+        current = 1;
+        numByPage = 7;
+        firstElement = (numByPage * (current - 1)) + 1
+        totalPages = int(np.ceil((len(mq[voice.token]) - 1) / numByPage))
+
+        queue = np.array(mq[voice.token])
         queue_info = ""
         i = 1
 
@@ -462,7 +467,7 @@ async def on_message(message):
         embed = discord.Embed(title=f":loud_sound: Tocando agora", description=current_track, color=0x7b0ec9)
         if queue_info != "":
             embed.add_field(name=f":headphones: Lista de reprodução", value=queue_info, inline=False)
-            embed.add_field(name=f"{len(mq)} músicas na fila.", value=f"Duração total média esperada: entre {format_duration(len(mq)*180)} e {format_duration(len(mq)*300)}", inline=False)
+            embed.add_field(name=f"{len(mq[voice.token])} músicas na fila.", value=f"Duração total média esperada: entre {format_duration(len(mq[voice.token])*180)} e {format_duration(len(mq[voice.token])*300)}", inline=False)
 
         mainMsg = await message.channel.send(embed=embed, 
                                                components = [
@@ -482,7 +487,8 @@ async def on_message(message):
                                                 Button(
                                                     label = ">",
                                                     id = "front",
-                                                    style = ButtonStyle.blue
+                                                    style = ButtonStyle.blue,
+                                                    disabled = False
                                                 )
                                                 ]
                                             ]
@@ -508,8 +514,8 @@ async def on_message(message):
                 
                 firstElement = (numByPage * (current - 1)) + 1
                 lastElement = firstElement + numByPage
-                if (lastElement > len(mq)):
-                    outOffset = lastElement - len(mq)
+                if (lastElement > len(mq[voice.token])):
+                    outOffset = lastElement - len(mq[voice.token])
                     lastElement = lastElement - outOffset
 
                 queue_info = ""
@@ -581,12 +587,12 @@ async def on_message(message):
             await message.channel.send(":exclamation: O bot não está tocando nenhuma música no momento")
             return
         
-        if len(mq) > 1:
+        if len(mq[voice.token]) > 1:
             voice.pause()
-            mq.pop(0)
-            audio = mq[0].streams.get_audio_only().url
+            mq[voice.token].pop(0)
+            audio = mq[voice.token][0].streams.get_audio_only().url
             voice.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
-            await message.channel.send(":fast_forward: **Pulando para**: `" + mq[0].title + "`")
+            await message.channel.send(":fast_forward: **Pulando para**: `" + mq[voice.token][0].title + "`")
         else:
             voice.stop()
             await message.channel.send(":arrow_down_small: A fila de reprodução chegou ao fim!")
@@ -612,26 +618,38 @@ async def on_message(message):
         await message.channel.send(":arrow_forward: Música despausada")
     
     if message.content == '>shuffle':
-        if (len(mq) > 1):
-            mq_slice = mq[1:]
+        voice = discord.utils.get(client.voice_clients, guild=message.guild)
+
+        if voice == None:
+            await message.channel.send(":exclamation: O bot não está tocando nenhuma música no momento")
+            return
+
+        if (len(mq[voice.token]) > 1):
+            mq_slice = mq[voice.token][1:]
             np.random.shuffle(mq_slice)
-            mq[1:] = mq_slice
+            mq[voice.token][1:] = mq_slice
 
             await message.channel.send(":twisted_rightwards_arrows: A fila de reprodução foi embaralhada!")
         else:
             await message.channel.send(":exclamation: A fila é pequena demais para ser embaralhada!")
 
     if message.content.startswith(">move "):
+        voice = discord.utils.get(client.voice_clients, guild=message.guild)
+
+        if voice == None:
+            await message.channel.send(":exclamation: O bot não está tocando nenhuma música no momento")
+            return
+
         par = message.content[6:]
         num_at, num_to = par.split()
 
         if (num_at.isdigit() and num_to.isdigit()):
             num_at = int(num_at)
             num_to = int(num_to)
-            if (1 < num_at <= len(mq) and 1 < num_to <= len(mq)):
-                music_at = mq[num_at - 1]
-                temp = mq.pop(num_at - 1)
-                mq.insert(num_to - 1, temp)
+            if (1 < num_at <= len(mq[voice.token]) and 1 < num_to <= len(mq[voice.token])):
+                music_at = mq[voice.token][num_at - 1]
+                temp = mq[voice.token].pop(num_at - 1)
+                mq[voice.token].insert(num_to - 1, temp)
                 await message.channel.send(":left_right_arrow: **Movendo** `" + music_at.title + "` **para** `" + str(num_to) + "`")
                 return
             else:
@@ -646,8 +664,9 @@ async def on_message(message):
         if voice != None:
             voice.stop()
 
-            if len(mq) > 0:
-                mq.clear()
+            if len(mq[voice.token]) > 0:
+                mq[voice.token].clear()
+                mq.pop(voice.token)
 
             for vc in client.voice_clients:
                 if vc.guild == message.guild:
@@ -656,13 +675,19 @@ async def on_message(message):
             await message.channel.send("O bot não está conectado!")
 
     if message.content.startswith('>remove '):
+        voice = discord.utils.get(client.voice_clients, guild=message.guild)
+
+        if voice == None:
+            await message.channel.send(":exclamation: O bot não está tocando nenhuma música no momento")
+            return
+        
         position = message.content[8:]
         position = position.replace(" ", "")
         
         if position.isdigit():
             position = int(position)
-            if (1 < position <= len(mq)):
-                music = mq.pop(position - 1)
+            if (1 < position <= len(mq[voice.token])):
+                music = mq[voice.token].pop(position - 1)
                 await message.channel.send(":hash: **Removendo** `" + music.title + "` da lista de reprodução!")
             else:
                 await message.channel.send(":exclamation: O número da posição é maior que a fila ou menor que 2!")
