@@ -7,6 +7,7 @@ import requests
 import asyncio
 import json
 import numpy as np
+from datetime import datetime, timezone, timedelta
 from time import strftime, gmtime
 from discord import FFmpegPCMAudio
 from pytube import Playlist, Search, YouTube
@@ -23,6 +24,7 @@ ffmpeg_opts = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_
 load_dotenv()
 TOKEN = os.getenv('TOKEN')
 RIOT_API_KEY = os.getenv('RIOT_API_KEY')
+VISUALCROSSING_API_KEY = os.getenv('VISUALCROSSING_API_KEY')
 
 # ===== LOAD DATA FILES =====
 
@@ -49,35 +51,14 @@ mq = []
 
 # ===== GENERAL FUNCTIONS =====
 
-def correct_name(city):
-    city = city.replace(" ", "+")
-    res = requests.get(f'https://www.google.com/search?q={city}&oq={city}&aqs=chrome.0.35i39l2j0l4j46j69i60.6128j1j7&sourceid=chrome&ie=UTF-8', headers=headers)
-    soup = BeautifulSoup(res.text, 'html.parser')
+def get_weather_time_data(city):
+    request_city = requests.get(f'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/{city}?unitGroup=metric&lang=pt&key={VISUALCROSSING_API_KEY}&contentType=json')
     
-    name_content = soup.select('.kno-ecr-pt');
-
-    if name_content == []:
+    if request_city.status_code != 200:
         return ""
-
-    name = name_content[0].getText().strip()
-    return name
-
-def get_weather(city):
-    city = city + " clima"
-    res = requests.get(f'https://www.google.com/search?q={city}&oq={city}&aqs=chrome.0.35i39l2j0l4j46j69i60.6128j1j7&sourceid=chrome&ie=UTF-8', headers=headers)
-    soup = BeautifulSoup(res.text, 'html.parser')
-    weather = soup.select('#wob_tm')[0].getText().strip()
-    info = soup.select('#wob_dc')[0].getText().strip()
-    humidity = soup.select('#wob_hm')[0].getText().strip()
-    return weather, info, humidity
-
-def get_time(city):
-    city = city + " horario"
-    res = requests.get(f'https://www.google.com/search?q={city}&oq={city}&aqs=chrome.0.35i39l2j0l4j46j69i60.6128j1j7&sourceid=chrome&ie=UTF-8', headers=headers)
-    soup = BeautifulSoup(res.text, 'html.parser')
-    time = soup.select('.vk_bk')[0].getText().strip()
-    date = soup.select('.KfQeJ')[0].getText().strip()
-    return date, time
+    
+    city_json = request_city.json()
+    return city_json
 
 def list_matchs(user):
     num_partidas = 5
@@ -319,15 +300,14 @@ async def on_message(message):
     if message.content.startswith('>report '):
         city = message.content[8:]
         if len(city) > 0:
-            city_correct = correct_name(city)
+            city_data = get_weather_time_data(city)
 
-            if city_correct == "":
+            if city_data == "":
                 await message.channel.send(":question: Cidade não encontrada")
                 return
 
-            local_weather = get_weather(city)
-            local_time = get_time(city)
-            await message.channel.send(f":bar_chart: **Relatório de {city_correct}**:\n\n:alarm_clock: {city_correct}, {local_time[0]}, {local_time[1]}\n:thermometer: {local_weather[0]} °C, {local_weather[2]} de umidade, {local_weather[1]}")
+            hora = datetime.now(timezone(timedelta(hours=city_data['tzoffset']))).strftime("%d/%m/%Y, %H:%M")
+            await message.channel.send(f":bar_chart: **Relatório de {city_data['resolvedAddress']}**:\n\n:alarm_clock: {hora}\n:thermometer: {city_data['currentConditions']['temp']} °C, {city_data['currentConditions']['humidity']}% de umidade, {city_data['currentConditions']['conditions']}")
 
     if message.content.startswith('>matchs '):
         nickname = message.content[8:]
