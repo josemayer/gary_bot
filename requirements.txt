@@ -1,0 +1,10 @@
+discord
+discord_components
+requests
+numpy
+datetime
+PyNaCl
+pytube
+python-dotenv
+bs4
+Pillow
