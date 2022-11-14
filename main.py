@@ -15,6 +15,8 @@ from bs4 import BeautifulSoup
 import sys
 sys.path.append('functions/')
 from tictactoe import saveImageTTT
+sys.path.append('modules/')
+import spotify
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -251,11 +253,11 @@ class QueueEmbed():
         self.current = 1
         self.numByPages = numByPages
         self.firstElement = (self.numByPages * (self.current - 1)) + 1
-        self.totalPages = max(int(np.ceil((len(self.queue) - 1) / self.numByPages)), 1)
+        self.totalPages = max(int(np.ceil((self.queue_size - 1) / self.numByPages)), 1)
         self.queue_info = ""
         
         i = 1
-        current_track = "`" + str(i) + ".` [" + self.queue[0].title + "](" + self.queue[0].watch_url + ") `(" + format_duration(self.queue[0].length) + ")`"
+        current_track = "`" + str(i) + ".` [" + self.queue[0]['obj'].title + "](" + self.queue[0]['obj'].watch_url + ") `(" + format_duration(self.queue[0]['obj'].length) + ")`"
         
         self.embed = discord.Embed(title=f":loud_sound: Tocando agora", description=current_track, color=0x7b0ec9)
         self.embed.set_footer(text=f"{self.queue_size} músicas na fila • Duração total média esperada: entre {format_duration(self.queue_size * 180)} e {format_duration(self.queue_size * 300)}")
@@ -269,7 +271,7 @@ class QueueEmbed():
         self.queue_info = ""
 
         for music in self.queue[self.firstElement:self.firstElement + self.numByPages]:
-            self.queue_info += "`" + str(index) + ".` [" + music.title + "](" + music.watch_url + ") `(" + format_duration(music.length) + ")`\n"
+            self.queue_info += "`" + str(index) + ".` [" + music['obj'].title + "](" + music['obj'].watch_url + ") `(" + format_duration(music['obj'].length) + ")`\n"
             index += 1
 
         if self.queue_info != "":
@@ -411,60 +413,108 @@ async def on_message(message):
         link = message.content[6:]
         author = message.author
         channel = author.voice.channel
-        playlist = valid_playlist_link(link)
         voice = discord.utils.get(client.voice_clients, guild=message.guild)
-        if voice == None:
-            vc = await channel.connect()
-            await message.channel.send("> :musical_note: **Gary na área** :musical_note:\n> no canal `" + channel.name + "`")
-            mq[vc.token] = []
-        else:
-            vc = voice
-        curr_q = mq[vc.token]
+        fromSpotify = 'https://open.spotify.com/' in link
+        if fromSpotify:
+            playlist = spotify.playlist_musics(link)
+            if voice == None:
+                vc = await channel.connect()
+                await message.channel.send("> :musical_note: **Gary na área** :musical_note:\n> no canal `" + channel.name + "`")
+                mq[vc.token] = []
+            else:
+                vc = voice
+            curr_q = mq[vc.token]
 
-        if not playlist:
-            primeiro_result = Search(link).results[0]
-            join_audio = primeiro_result
-        else:
-            playlist_info = Playlist(link)
-            playlist_musics = playlist_info.videos
-
-            if len(playlist_info) == 0:
+            if len(playlist) == 0:
                 await message.channel.send(":question: Ocorreu um erro inesperado com a playlist!")
                 return
 
-            join_audio = playlist_musics[0]
+            for music in playlist:
+                music_obj = spotify.dict_to_object(music)
+                curr_q.append({'from': 'spotify', 'obj': music_obj})
+            await message.channel.send("> :arrow_double_down: **Adicionado à fila** : " + str(len(playlist)) + " músicas de `" + '`playlist nome`' + "`")
 
-        if len(curr_q) > 0:
-            if not playlist:
-                curr_q.append(join_audio)
-                await message.channel.send("> :arrow_double_down: **Adicionado à fila** [" + str(len(curr_q)) + "] : `" + join_audio.title + "`")
-            else:
-                for music in playlist_musics:
-                    curr_q.append(music)
-                await message.channel.send("> :arrow_double_down: **Adicionado à fila** : " + str(len(playlist_info)) + " músicas de `" + playlist_info.title + "`")
+
+            if curr_q[0]['from'] == 'spotify':
+                formato_spotify = curr_q.pop(0)
+
+                query_first = formato_spotify['obj'].title + " - "
+                for artist in formato_spotify['obj'].artists:
+                    query_first += artist + ", "
+                query_first += "(lyrics)"
+
+                first_result = Search(query_first).results[0]
+                join_audio = first_result
+            
+                curr_q.insert(0, {'from': 'youtube', 'obj': join_audio})
         else:
-            if not playlist:
-                curr_q.append(join_audio)
-                await message.channel.send("> :notes: **Tocando** :notes: : `" + join_audio.title + "`")
+            playlist = valid_playlist_link(link)
+            if voice == None:
+                vc = await channel.connect()
+                await message.channel.send("> :musical_note: **Gary na área** :musical_note:\n> no canal `" + channel.name + "`")
+                mq[vc.token] = []
             else:
-                for music in playlist_musics:
-                    curr_q.append(music)
-                await message.channel.send("> :arrow_double_down: **Adicionado à fila** : " + str(len(playlist_info)) + " músicas de `" + playlist_info.title + "`")
-            
-            while len(curr_q) > 0:
-                audio = curr_q[0].streams.get_audio_only().url
-                vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
-            
-                while vc.is_playing() or vc.is_paused():
-                    await asyncio.sleep(1)
-                
-                if len(curr_q) > 0:
-                    curr_q.pop(0)
+                vc = voice
+            curr_q = mq[vc.token]
 
-            for vc in client.voice_clients:
-                if vc.guild == message.guild:
-                    mq.pop(vc.token)
-                    await vc.disconnect()
+            if not playlist:
+                primeiro_result = Search(link).results[0]
+                join_audio = primeiro_result
+            else:
+                playlist_info = Playlist(link)
+                playlist_musics = playlist_info.videos
+
+                if len(playlist_info) == 0:
+                    await message.channel.send(":question: Ocorreu um erro inesperado com a playlist!")
+                    return
+
+                join_audio = playlist_musics[0]
+
+
+            if len(curr_q) > 0:
+                if not playlist:
+                    curr_q.append({'from': 'youtube', 'obj': join_audio})
+                    await message.channel.send("> :arrow_double_down: **Adicionado à fila** [" + str(len(curr_q)) + "] : `" + join_audio.title + "`")
+                else:
+                    for music in playlist_musics:
+                        curr_q.append({'from': 'youtube', 'obj': music})
+                    await message.channel.send("> :arrow_double_down: **Adicionado à fila** : " + str(len(playlist_info)) + " músicas de `" + playlist_info.title + "`")
+            else:
+                if not playlist:
+                    curr_q.append({'from': 'youtube', 'obj': join_audio})
+                    await message.channel.send("> :notes: **Tocando** :notes: : `" + join_audio.title + "`")
+                else:
+                    for music in playlist_musics:
+                        curr_q.append({'from': 'youtube', 'obj': music})
+                    await message.channel.send("> :arrow_double_down: **Adicionado à fila** : " + str(len(playlist_info)) + " músicas de `" + playlist_info.title + "`")
+                
+        while len(curr_q) > 0:
+            audio = curr_q[0]['obj'].streams.get_audio_only().url
+            vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
+        
+            while vc.is_playing() or vc.is_paused():
+                await asyncio.sleep(1)
+            
+            if len(curr_q) > 0:
+                curr_q.pop(0)
+                
+                if curr_q[0]['from'] == 'spotify':
+                    formato_spotify = curr_q.pop(0)
+
+                    query_first = formato_spotify['obj'].title + " - "
+                    for artist in formato_spotify['obj'].artists:
+                        query_first += artist + ", "
+                    query_first += "(lyrics)"
+
+                    first_result = Search(query_first).results[0]
+                    join_audio = first_result
+                
+                    curr_q.insert(0, {'from': 'youtube', 'obj': join_audio})
+
+        for vc in client.voice_clients:
+            if vc.guild == message.guild:
+                mq.pop(vc.token)
+                await vc.disconnect()
 
 
     if message.content == '>queue':
@@ -474,7 +524,7 @@ async def on_message(message):
             await message.channel.send("A fila de reprodução está vazia!")
             return
 
-        queue_embed = QueueEmbed(7, np.array(mq[voice.token]))
+        queue_embed = QueueEmbed(7, mq[voice.token])
         mainMsg = await message.channel.send(content=f":clock9: Carregando...")
         queue_view = PageButtons(mainMsg, queue_embed)
         await mainMsg.edit(content="", embed=queue_embed.embed, view=queue_view)
@@ -487,14 +537,10 @@ async def on_message(message):
             return
         
         if len(mq[voice.token]) > 1:
-            voice.pause()
-            mq[voice.token].pop(0)
-            audio = mq[voice.token][0].streams.get_audio_only().url
-            voice.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
-            await message.channel.send(":fast_forward: **Pulando para**: `" + mq[voice.token][0].title + "`")
+            await message.channel.send(":fast_forward: **Pulando para**: `" + mq[voice.token][1]['obj'].title + "`")
         else:
-            voice.stop()
             await message.channel.send(":arrow_down_small: A fila de reprodução chegou ao fim!")
+        voice.stop()
 
     if message.content == '>pause':
         voice = discord.utils.get(client.voice_clients, guild=message.guild)
@@ -549,7 +595,7 @@ async def on_message(message):
                 music_at = mq[voice.token][num_at - 1]
                 temp = mq[voice.token].pop(num_at - 1)
                 mq[voice.token].insert(num_to - 1, temp)
-                await message.channel.send(":left_right_arrow: **Movendo** `" + music_at.title + "` **para** `" + str(num_to) + "`")
+                await message.channel.send(":left_right_arrow: **Movendo** `" + music_at['obj'].title + "` **para** `" + str(num_to) + "`")
                 return
             else:
                 await message.channel.send(":exclamation: Há números de posição maiores que a fila ou menores que 2")
@@ -587,13 +633,23 @@ async def on_message(message):
             position = int(position)
             if (1 < position <= len(mq[voice.token])):
                 music = mq[voice.token].pop(position - 1)
-                await message.channel.send(":hash: **Removendo** `" + music.title + "` da lista de reprodução!")
+                await message.channel.send(":hash: **Removendo** `" + music['obj'].title + "` da lista de reprodução!")
             else:
                 await message.channel.send(":exclamation: O número da posição é maior que a fila ou menor que 2!")
                 return
         else:
             await message.channel.send(":exclamation: A posição não é adequada!")
             return
+
+    if message.content.startswith('>teste '):
+        url = message.content[7:]
+        playlist_spotify = spotify.playlist_musics(url)
+
+        message_bot = ""
+        for music in playlist_spotify:
+            message_bot += music.title + ', '
+
+        await message.channel.send(message_bot)
 
 @client.event
 async def on_connect():
