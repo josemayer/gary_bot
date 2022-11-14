@@ -1,5 +1,4 @@
-discord
-discord_components
+discord.py==2.1.0
 requests
 numpy
 datetime
