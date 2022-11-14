@@ -1,3 +1,5 @@
 services:
   gary:
     build: .
+    volumes:
+      - ./:/gary
