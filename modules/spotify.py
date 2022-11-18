@@ -84,4 +84,4 @@ def playlist_musics(url):
     res = requests.get(url=playlistUrl, headers=headers)
     dict_playlist = res.json()
 
-    return create_playlist_info(dict_playlist, typeList)
+    return dict_playlist['name'], create_playlist_info(dict_playlist, typeList)

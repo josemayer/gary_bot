@@ -416,7 +416,7 @@ async def on_message(message):
         voice = discord.utils.get(client.voice_clients, guild=message.guild)
         fromSpotify = 'https://open.spotify.com/' in link
         if fromSpotify:
-            playlist = spotify.playlist_musics(link)
+            name_playlist, playlist = spotify.playlist_musics(link)
             if voice == None:
                 vc = await channel.connect()
                 await message.channel.send("> :musical_note: **Gary na área** :musical_note:\n> no canal `" + channel.name + "`")
@@ -432,7 +432,7 @@ async def on_message(message):
             for music in playlist:
                 music_obj = spotify.dict_to_object(music)
                 curr_q.append({'from': 'spotify', 'obj': music_obj})
-            await message.channel.send("> :arrow_double_down: **Adicionado à fila** : " + str(len(playlist)) + " músicas de `" + '`playlist nome`' + "`")
+            await message.channel.send("> :arrow_double_down: **Adicionado à fila** : " + str(len(playlist)) + " músicas de `" + name_playlist + "`")
 
 
             if curr_q[0]['from'] == 'spotify':
