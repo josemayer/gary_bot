@@ -3,6 +3,7 @@ import sys
 import requests
 import base64
 import json
+import traceback
 from dotenv import load_dotenv
 from collections import namedtuple
 
@@ -12,21 +13,23 @@ load_dotenv()
 clientId=os.getenv("SPOTIPY_CLIENT_ID")
 clientSecret=os.getenv("SPOTIPY_CLIENT_SECRET")
 
-url = "https://accounts.spotify.com/api/token"
-headers = {}
-data = {}
+def auth():
+    url = "https://accounts.spotify.com/api/token"
+    headers = {}
+    data = {}
 
-message = f"{clientId}:{clientSecret}"
-messageBytes = message.encode('ascii')
-base64Bytes = base64.b64encode(messageBytes)
-base64Message = base64Bytes.decode('ascii')
+    message = f"{clientId}:{clientSecret}"
+    messageBytes = message.encode('ascii')
+    base64Bytes = base64.b64encode(messageBytes)
+    base64Message = base64Bytes.decode('ascii')
 
-headers['Authorization'] = f"Basic {base64Message}"
-data['grant_type'] = "client_credentials"
+    headers['Authorization'] = f"Basic {base64Message}"
+    data['grant_type'] = "client_credentials"
 
-r = requests.post(url, headers=headers, data=data)
+    r = requests.post(url, headers=headers, data=data)
 
-token = r.json()['access_token']
+    token = r.json()['access_token']
+    return token
 
 def get_id_by_link(url):
     if 'playlist' in url:
@@ -74,14 +77,20 @@ def dict_to_object(dict_playlist):
 def playlist_musics(url):
     typeList, playlistId = get_id_by_link(url)
 
-    # Step 2 - Use Access Token to call playlist endpoint
-
     playlistUrl = f"https://api.spotify.com/v1/{typeList}/{playlistId}"
+    token = auth()
     headers = {
         "Authorization": "Bearer " + token
     }
 
     res = requests.get(url=playlistUrl, headers=headers)
     dict_playlist = res.json()
+    print(dict_playlist)
 
-    return dict_playlist['name'], create_playlist_info(dict_playlist, typeList)
+    
+    try:
+        name_playlist = dict_playlist['name']
+    except:
+        traceback.print_exc()
+
+    return name_playlist, create_playlist_info(dict_playlist, typeList)
