@@ -266,7 +266,7 @@ class QueueEmbed():
         current_track = "`" + str(i) + ".` [" + self.queue[0]['obj'].title + "](" + self.queue[0]['obj'].watch_url + ") `(" + format_duration(self.queue[0]['obj'].length) + ")`"
         
         self.embed = discord.Embed(title=f":loud_sound: Tocando agora", description=current_track, color=0x7b0ec9)
-        self.embed.set_footer(text=f"{self.queue_size} músicas na fila • Duração total média esperada: entre {format_duration(self.queue_size * 180)} e {format_duration(self.queue_size * 300)}")
+        self.embed.set_footer(text=f"{self.queue_size} músicas na fila • Duração total: {self.calculateTotalDuration()}")
         i += 1
         self.updateEmbed(i)
 
@@ -303,6 +303,12 @@ class QueueEmbed():
             self.firstElement = self.updateFirstElement()
             self.updateEmbed(self.firstElement + 1)
             return (self.current, self.embed)
+
+    def calculateTotalDuration(self):
+        music_time = timedelta(0)
+        for music in self.queue:
+            music_time += timedelta(seconds=music['obj'].length)
+        return str(music_time)
 
 @client.event
 async def on_ready():
