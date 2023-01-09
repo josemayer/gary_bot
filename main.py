@@ -52,6 +52,12 @@ mq = {}
 
 # ==================================
 
+# ===== INITIALIZE IDLE COUNTERS =====
+
+idle_counters = []
+
+# =================================
+
 # ===== GENERAL FUNCTIONS =====
 
 def get_weather_time_data(city):
@@ -381,8 +387,8 @@ async def on_message(message):
         audio = join_audio.streams.get_audio_only().url
         mq[vc.token] = []
         vc.play(FFmpegPCMAudio(audio, **ffmpeg_opts))
-        vc.is_playing()
-    
+        await idle_disconnect(vc, message.channel)
+
     for sound in sounds_list:
         if message.content == '>' + sound['command']:
             join_audio = YouTube(sound['link'])
@@ -404,10 +410,7 @@ async def on_message(message):
            
             await asyncio.sleep(sound['time'])
 
-            if vc != None:
-                for vc in client.voice_clients:
-                    if vc.guild == message.guild:
-                        await vc.disconnect()
+            await idle_disconnect(vc, message.channel) 
 
     if message.content.startswith(">play "):
         link = message.content[6:]
@@ -498,7 +501,7 @@ async def on_message(message):
             if len(curr_q) > 0:
                 curr_q.pop(0)
                 
-                if curr_q[0]['from'] == 'spotify':
+                if len(curr_q) > 0 and curr_q[0]['from'] == 'spotify':
                     formato_spotify = curr_q.pop(0)
 
                     query_first = formato_spotify['obj'].title + " - "
@@ -513,9 +516,8 @@ async def on_message(message):
 
         for vc in client.voice_clients:
             if vc.guild == message.guild:
+                await idle_disconnect(vc, message.channel)
                 mq.pop(vc.token)
-                await vc.disconnect()
-
 
     if message.content == '>queue':
         voice = discord.utils.get(client.voice_clients, guild=message.guild)
@@ -650,6 +652,26 @@ async def on_message(message):
             message_bot += music.title + ', '
 
         await message.channel.send(message_bot)
+
+async def idle_disconnect(vc, channel):
+    if vc.channel.id not in idle_counters:
+        idle_counters.append(vc.channel.id)
+        counter = 0
+        while counter < 150:
+            await asyncio.sleep(1)
+            
+            if not vc.is_connected():
+                break
+
+            if not vc.is_playing() and not vc.is_paused():
+                counter += 1
+            else:
+                counter = 0
+
+        if vc.is_connected():
+            await channel.send(":zzz: Você ainda está aí, agente? Vou me retirar da missão por enquanto. É só me chamar, caso precise!")
+            await vc.disconnect()
+        idle_counters.remove(vc.channel.id)
 
 @client.event
 async def on_connect():
