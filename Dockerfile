@@ -1,5 +1,5 @@
 FROM python:3.9-slim
-RUN apt-get update && apt-get install -y build-essential python-dev
+RUN apt-get update && apt-get install -y build-essential python-dev-is-python3
 RUN apt-get install -y libffi-dev ffmpeg
 
 WORKDIR /gary
