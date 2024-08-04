@@ -4,6 +4,9 @@ numpy
 datetime
 PyNaCl
 pytube
+pytubefix
 python-dotenv
 bs4
 Pillow
+google-auth==1.35.0
+google-auth-oauthlib==0.4.6

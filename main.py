@@ -9,7 +9,7 @@ import numpy as np
 from datetime import datetime, timezone, timedelta
 from time import strftime, gmtime
 from discord import FFmpegPCMAudio
-from pytube import Playlist, Search, YouTube
+from pytubefix import Playlist, Search, YouTube
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 import sys
