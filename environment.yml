@@ -1,0 +1,20 @@
+name: gary_bot
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9
+  - pip
+  - libffi
+  - ffmpeg
+  - numpy
+  - pynacl
+  - pytube
+  - python-dotenv
+  - beautifulsoup4
+  - pillow
+  - google-auth=1.35.0
+  - google-auth-oauthlib=0.4.6
+  - pip:
+      - discord.py==2.3.2
+      - requests
+      - pytubefix
