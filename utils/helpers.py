@@ -2,6 +2,7 @@ import aiohttp
 import json
 from time import strftime, gmtime
 from datetime import timedelta
+from config import RIOT_API_KEY
 
 async def fetch_json(url, headers=None):
     async with aiohttp.ClientSession() as session:
@@ -10,16 +11,19 @@ async def fetch_json(url, headers=None):
                 return await response.json()
             return None
 
-async def list_matches(user):
+async def list_matches(gameName, tagLine):
     num_partidas = 5
-    user_data = await fetch_json(f'https://br1.api.riotgames.com/lol/summoner/v4/summoners/by-name/{user}?api_key={RIOT_API_KEY}')
+    user = await fetch_json(f'https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine}?api_key={RIOT_API_KEY}')
 
-    if not user_data:
+    if not user:
         return None, None, None
 
-    user_puuid = user_data['puuid']
-    user_icon = f"https://opgg-static.akamaized.net/images/profile_icons/profileIcon{user_data['profileIconId']}.jpg"
-    user_name = user_data['name']
+    user_data = await fetch_json(f'https://br1.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{user["puuid"]}?api_key={RIOT_API_KEY}')
+    user_puuid = user['puuid']
+    user_name = f"{user['gameName']}#{user['tagLine']}"
+
+    ddragon_versions = await fetch_json('https://ddragon.leagueoflegends.com/api/versions.json')
+    user_icon = f"https://ddragon.leagueoflegends.com/cdn/{ddragon_versions[0]}/img/profileicon/{user_data['profileIconId']}.png"
 
     matches_ids = await fetch_json(f'https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{user_puuid}/ids?start=0&count={num_partidas}&api_key={RIOT_API_KEY}')
     if not matches_ids:

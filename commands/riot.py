@@ -4,16 +4,20 @@ from utils.helpers import list_matches, treat_links
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
-RIOT_API_KEY = os.getenv('RIOT_API_KEY')
-
 class Riot(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command(name='matchs')
     async def matchs_command(self, ctx, *, nickname: str):
-        nickname, icon, games = await list_matches(nickname)
+        gameName, tagLine = "", ""
+        try:
+            gameName, tagLine = nickname.split('#')
+        except:
+            await ctx.send(":question: Formato de invocador inválido! Use o formato `Nome#Tag`")
+            return
+
+        nickname, icon, games = await list_matches(gameName, tagLine)
         if nickname is None:
             await ctx.send(":question: Invocador não encontrado!")
             return
