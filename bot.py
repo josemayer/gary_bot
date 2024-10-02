@@ -4,7 +4,7 @@ import discord
 import os
 from dotenv import load_dotenv
 from discord.ext import commands
-from commands import general, music, riot, emotes
+from commands import general, music, riot, emotes, weather
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -20,6 +20,7 @@ async def on_ready():
     await bot.add_cog(music.Music(bot))
     await bot.add_cog(riot.Riot(bot))
     await bot.add_cog(emotes.Emotes(bot))
+    await bot.add_cog(weather.Weather(bot))
 
     await bot.change_presence(activity=discord.Game(name=">help"))
     print(f'Logged in as {bot.user}')

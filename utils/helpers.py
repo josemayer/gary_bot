@@ -2,7 +2,7 @@ import aiohttp
 import json
 from time import strftime, gmtime
 from datetime import timedelta
-from config import RIOT_API_KEY
+from config import RIOT_API_KEY, VISUALCROSSING_API_KEY
 
 async def fetch_json(url, headers=None):
     async with aiohttp.ClientSession() as session:
@@ -70,3 +70,6 @@ def valid_playlist_link(url):
 
 def format_duration(duration):
     return strftime("%H:%M:%S", gmtime(duration)) if duration > 3600 else strftime("%M:%S", gmtime(duration))
+
+async def get_weather_time_data(city):
+    return await fetch_json(f'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/{city}?unitGroup=metric&lang=pt&key={VISUALCROSSING_API_KEY}&contentType=json')

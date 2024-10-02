@@ -24,5 +24,10 @@ class General(commands.Cog):
         await ctx.send(file=discord.File('assets/imgs/msg.png'))
         os.remove('assets/imgs/msg.png')
 
+    @commands.command(name='hentai')
+    async def hentai_command(self, ctx, *, character: str):
+        await ctx.send(f":mag: Pesquisando por {character}...")
+        await ctx.author.send(f"Devidamente printado e enviado às autoridades!!!!")
+
 def setup(bot):
     bot.add_cog(General(bot))
