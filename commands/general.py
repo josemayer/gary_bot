@@ -26,10 +26,6 @@ class General(commands.Cog):
 
     @commands.command(name='hentai')
     async def hentai_command(self, ctx, *, character: str):
-        if character is None:
-            await ctx.send(f":exclamation: Você precisa especificar um personagem!")
-            return
-
         await ctx.send(f":mag: Pesquisando por {character}...")
         await ctx.author.send(f"Devidamente printado e enviado às autoridades!!!!")
 
